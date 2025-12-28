@@ -1,0 +1,255 @@
+# Project Status
+
+> Текущий статус разработки monotation
+
+**Последнее обновление**: 28 декабря 2025, 21:45
+
+---
+
+## 🎯 Текущая фаза: НАСТРОЙКА ЗАВЕРШЕНА ✅
+
+Проект полностью настроен и готов к разработке!
+
+---
+
+## ✅ Что СДЕЛАНО:
+
+### 1. Документация и настройка Cursor ✅
+- [x] PROJECT.md создан (полная спецификация проекта)
+- [x] README.md создан (GitHub главная страница)
+- [x] WORKFLOW.md создан (workflow разработки)
+- [x] GIT_SETUP.md создан (git инструкции)
+- [x] .cursor/index.mdc настроен (Project Rules для iOS/Swift/SwiftUI)
+- [x] .cursor/notepads/ созданы (4 файла с контекстом)
+- [x] .cursorignore настроен
+- [x] .gitignore настроен для iOS проекта
+
+### 2. Git & GitHub ✅
+- [x] Git репозиторий инициализирован
+- [x] GitHub репозиторий создан: [github.com/neprokin/monotation](https://github.com/neprokin/monotation)
+- [x] Первый коммит: "chore: initial project setup" (3d0add0)
+- [x] Второй коммит: "feat: create Xcode project with MVVM structure" (171fa18)
+- [x] Код загружен на GitHub
+
+### 3. Xcode проект ✅
+- [x] monotation.xcodeproj создан
+- [x] MVVM структура папок организована:
+  - App/
+  - Views/
+  - ViewModels/
+  - Models/
+  - Services/
+  - Config/
+  - Extensions/
+  - Resources/
+- [x] Базовые файлы созданы:
+  - monotationApp.swift (entry point)
+  - ContentView.swift (первый экран)
+  - Config.example.swift (шаблон конфига)
+  - Date+Extensions.swift
+  - TimeInterval+Extensions.swift
+
+### 4. Зависимости и Capabilities ✅
+- [x] Supabase Swift SDK добавлен (v2.39.0)
+  - Включает: swift-asn1, swift-clocks, swift-concurrency-extras
+  - swift-crypto, swift-http-types, xctest-dynamic-overlay
+- [x] Sign in with Apple capability добавлена
+- [x] Signing настроен (Manual signing)
+
+### 5. Архивация ✅
+- [x] Cursor setup guide перемещен в _cursor_setup_guide/
+- [x] Архив задокументирован (ARCHIVE_INFO.md)
+
+---
+
+## 📋 СЛЕДУЮЩИЙ ШАГ: Разработка
+
+### Готово начинать разработку с:
+
+#### **1. Models** (следующий этап)
+Создать 3 файла:
+- [ ] Models/Meditation.swift
+- [ ] Models/MeditationPose.swift
+- [ ] Models/MeditationPlace.swift
+
+**Детали в:** `.cursor/notepads/data-models.md`
+
+#### **2. Timer Screen**
+- [ ] Views/Timer/TimerView.swift
+- [ ] ViewModels/TimerViewModel.swift
+- [ ] Views/Timer/TimerCircleView.swift (visual countdown)
+
+#### **3. Meditation Form**
+- [ ] Views/Meditation/MeditationFormView.swift
+- [ ] ViewModels/MeditationFormViewModel.swift
+
+#### **4. History Screen**
+- [ ] Views/History/HistoryView.swift
+- [ ] ViewModels/HistoryViewModel.swift
+- [ ] Views/History/MeditationCard.swift
+
+#### **5. Services (Backend)**
+- [ ] Services/SupabaseService.swift
+- [ ] Services/AuthService.swift
+- [ ] Services/NotificationService.swift
+
+#### **6. Auth Screen**
+- [ ] Views/Auth/AuthView.swift
+- [ ] ViewModels/AuthViewModel.swift
+
+---
+
+## 🔧 Технический стек (фактический)
+
+### iOS
+```
+Platform:     iOS 17.0+
+Language:     Swift 5.9+
+Framework:    SwiftUI
+Architecture: MVVM
+IDE:          Xcode 26.2
+```
+
+### Backend
+```
+Service:      Supabase
+SDK:          supabase-swift v2.39.0
+Database:     PostgreSQL
+Auth:         Apple Sign In
+```
+
+### Project Structure
+```
+monotation/
+├── monotation.xcodeproj/          # Xcode project
+└── monotation/                    # iOS app source
+    ├── App/                       # Entry point
+    ├── Views/                     # SwiftUI views
+    ├── ViewModels/                # Business logic
+    ├── Models/                    # Data models
+    ├── Services/                  # Backend services
+    ├── Config/                    # Configuration
+    ├── Extensions/                # Swift extensions
+    └── Resources/                 # Assets
+```
+
+---
+
+## 🎯 План разработки
+
+### Оценка времени (при работе с AI):
+```
+Models:          2-3 часа
+Timer Screen:    4-5 часов
+Form Screen:     3-4 часа
+History Screen:  3-4 часа
+Services:        3-4 часа
+Auth Screen:     2-3 часа
+Testing:         2-3 часа
+───────────────────────
+ИТОГО:          20-26 часов
+= 1-2 недели в комфортном темпе
+```
+
+---
+
+## 🔄 Как продолжить работу
+
+### Когда вернешься к разработке:
+
+**1. Открой проекты:**
+```bash
+# Cursor для кода
+open -a Cursor "/path/to/meditation app"
+
+# Xcode для тестирования
+cd "/path/to/meditation app/monotation"
+open monotation.xcodeproj
+```
+
+**2. Проверь текущий статус:**
+- Открой STATUS.md (этот файл)
+- Посмотри что сделано ✅ и что дальше ⏳
+
+**3. Продолжи с Models:**
+- Скажи мне: "Продолжаем, создаём Models"
+- Я создам 3 файла моделей
+- Ты проверишь в Xcode
+
+**4. Workflow:**
+- Я создаю код → Ты тестируешь в Xcode
+- Находишь баг → Я исправляю
+- Фича работает → Git commit
+
+---
+
+## 📚 Важные файлы для продолжения
+
+### Документация:
+- **PROJECT.md** - полная спецификация monotation
+- **WORKFLOW.md** - как работать (Cursor + Xcode)
+- **STATUS.md** - текущий прогресс (этот файл)
+
+### Cursor контекст:
+- **@ProjectOverview** - обзор проекта
+- **@DataModels** - модели данных
+- **@Architecture** - архитектура MVVM
+- **@DevelopmentNotes** - практические заметки
+
+### Для старта разработки:
+```
+Скажи: "Продолжаем, создаём Models"
+```
+
+---
+
+## 🐛 Known Issues
+
+Пока нет известных проблем.
+
+---
+
+## 💬 Коммуникация с AI
+
+### Когда вернешься, скажи:
+- **"Продолжаем с Models"** - начнем разработку
+- **"Покажи что сделано"** - я напомню прогресс
+- **"Что дальше?"** - расскажу следующий шаг
+
+### Во время разработки:
+- **"Создай [компонент]"** - я создам код
+- **"Ошибка: [текст ошибки]"** - я исправлю
+- **"Измени [что-то]"** - я отредактирую
+
+---
+
+## 🔗 Полезные ссылки
+
+- **GitHub Repo**: https://github.com/neprokin/monotation
+- **Supabase Swift**: https://github.com/supabase/supabase-swift
+- **Swift Docs**: https://docs.swift.org/swift-book/
+- **SwiftUI Docs**: https://developer.apple.com/documentation/swiftui
+
+---
+
+## 📝 Notes
+
+### Важные решения:
+- ✅ Используем Supabase для backend
+- ✅ Apple Sign In для auth
+- ✅ Минималистичный дизайн (нативные iOS компоненты)
+- ✅ MVVM архитектура
+- ✅ iOS 17.0+ target
+
+### Для будущего (v1.1+):
+- AI-анализ медитаций (v2.0)
+- Статистика и графики (v1.1)
+- iPad support (v1.2)
+- Apple Watch (v2.0)
+
+---
+
+**Проект готов к разработке!** 🚀
+
+**Следующая сессия:** Создание Models → Timer → Form → History → Services → Auth
+

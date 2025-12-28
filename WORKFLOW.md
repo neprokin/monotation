@@ -55,9 +55,9 @@ Cursor (AI)          Xcode (Ты)
 
 ---
 
-## 🚀 Стартовая настройка (ОДИН РАЗ)
+## 🚀 Стартовая настройка (ОДИН РАЗ) ✅ ЗАВЕРШЕНО
 
-### 1. Создание Xcode проекта (ТЫ)
+### 1. Создание Xcode проекта (ТЫ) ✅ СДЕЛАНО
 
 ```
 1. Открой Xcode
@@ -66,17 +66,16 @@ Cursor (AI)          Xcode (Ты)
 4. Настрой:
    ├── Product Name: monotation
    ├── Team: [твой Apple Developer team]
-   ├── Organization Identifier: com.[твоё имя]
-   ├── Bundle Identifier: com.[твоё имя].monotation
+   ├── Organization Identifier: com.neprokin
+   ├── Bundle Identifier: com.neprokin.monotation
    ├── Interface: SwiftUI
    ├── Language: Swift
    ├── Storage: None
    └── Location: [текущая папка "meditation app"]
 5. Create!
-6. Закрой Xcode (пока)
 ```
 
-**Результат:**
+**Результат:** ✅
 ```
 meditation app/
 ├── monotation/
@@ -86,37 +85,37 @@ meditation app/
 └── monotation.xcodeproj/
 ```
 
-### 2. Настройка структуры (AI в Cursor)
+### 2. Настройка структуры (AI в Cursor) ✅ СДЕЛАНО
 
-После создания проекта:
-- Создам правильные папки (Views/, ViewModels/, Models/, Services/)
-- Организую файлы по архитектуре MVVM
-- Создам базовые файлы (Config.swift, Extensions)
-- Настрою Swift Package Manager зависимости
+- ✅ Создал правильные папки (Views/, ViewModels/, Models/, Services/)
+- ✅ Организовал файлы по архитектуре MVVM
+- ✅ Создал базовые файлы (Config.example.swift, Extensions)
+- ✅ Настроил структуру под Swift Package Manager
 
-### 3. Добавление зависимостей (ТЫ в Xcode)
-
-```
-1. Открой monotation.xcodeproj в Xcode
-2. Project Navigator → monotation (синяя иконка)
-3. TARGETS → monotation
-4. Package Dependencies tab
-5. + (Add Package)
-6. Добавь:
-   - https://github.com/supabase/supabase-swift
-7. Add Package
-```
-
-### 4. Настройка Capabilities (ТЫ в Xcode)
+### 3. Добавление зависимостей (ТЫ в Xcode) ✅ СДЕЛАНО
 
 ```
-1. Project Navigator → monotation (синяя иконка)
-2. TARGETS → monotation
-3. Signing & Capabilities tab
-4. + Capability
-5. Добавь: "Sign in with Apple"
-6. Готово!
+✅ Supabase Swift SDK добавлен (v2.39.0)
+   File → Add Package Dependencies...
+   URL: https://github.com/supabase/supabase-swift
+   Version: 2.39.0
 ```
+
+### 4. Настройка Capabilities (ТЫ в Xcode) ✅ СДЕЛАНО
+
+```
+✅ Sign in with Apple capability добавлена
+   Signing & Capabilities → + Capability
+   Sign in with Apple (снял Automatically manage signing)
+```
+
+---
+
+## 🚀 ГОТОВО К РАЗРАБОТКЕ!
+
+**Статус**: Все настроено, можно начинать писать код.  
+**Следующий шаг**: Создание Models (Meditation, Pose, Place)  
+**Смотри**: [STATUS.md](STATUS.md) для текущего прогресса
 
 ---
 
