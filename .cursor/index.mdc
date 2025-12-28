@@ -1,0 +1,699 @@
+# monotation - iOS Meditation Tracker
+
+## Project Overview
+iOS приложение для отслеживания медитаций. Минималистичный дизайн, нативные компоненты, готовность к AI-анализу в будущем.
+
+---
+
+## Stack & Tools
+
+### Core
+- **Language**: Swift 5.9+
+- **Framework**: SwiftUI
+- **Target**: iOS 17.0+
+- **Architecture**: MVVM (Model-View-ViewModel)
+- **Backend**: Supabase (PostgreSQL + Auth)
+- **Package Manager**: Swift Package Manager
+- **IDE**: Xcode 15+
+
+### Dependencies
+- `supabase-swift` - Official Supabase SDK
+- (other packages as needed)
+
+---
+
+## Swift Code Style
+
+### Naming Conventions
+```swift
+// Variables, functions, properties: camelCase
+let meditationTimer = Timer()
+func startMeditation() { }
+
+// Types (Classes, Structs, Enums, Protocols): PascalCase
+struct Meditation { }
+class TimerViewModel: ObservableObject { }
+enum MeditationPose { }
+protocol MeditationServiceProtocol { }
+
+// Constants: camelCase (not SCREAMING_SNAKE_CASE)
+let defaultDuration: TimeInterval = 600
+
+// Enums: singular, cases lowercase
+enum MeditationPlace {
+    case home
+    case work
+    case custom(String)
+}
+```
+
+### Swift Best Practices
+```swift
+// ✅ Use guard for early returns
+guard let user = currentUser else { return }
+
+// ✅ Prefer immutable (let) over mutable (var)
+let meditation = Meditation(...)
+
+// ✅ Avoid force unwrap (!) - use optional binding
+if let meditation = meditation { ... }
+
+// ✅ Use async/await, not completion handlers
+func fetchMeditations() async throws -> [Meditation]
+
+// ✅ Type inference where obvious
+let count = 5  // not: let count: Int = 5
+
+// ✅ Explicit types for public API
+public func saveMeditation(_ meditation: Meditation) async throws -> Bool
+
+// ❌ Avoid nested closures (use async/await)
+// ❌ Avoid force casting (as!)
+// ❌ Avoid implicitly unwrapped optionals (!) in models
+```
+
+### Error Handling
+```swift
+// ✅ Use Result type for sync operations
+func validateForm() -> Result<MeditationData, ValidationError>
+
+// ✅ Use throws for async operations
+func saveMeditation() async throws
+
+// ✅ Custom errors
+enum MeditationError: LocalizedError {
+    case invalidDuration
+    case networkFailure
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidDuration: return "Invalid meditation duration"
+        case .networkFailure: return "Network connection failed"
+        }
+    }
+}
+```
+
+---
+
+## SwiftUI Best Practices
+
+### State Management
+```swift
+// ✅ @State for view-local simple state
+@State private var selectedTime: Int = 10
+
+// ✅ @StateObject for view-owned ViewModels (created by view)
+@StateObject private var viewModel = TimerViewModel()
+
+// ✅ @ObservedObject for ViewModels passed from parent
+@ObservedObject var viewModel: HistoryViewModel
+
+// ✅ @EnvironmentObject for app-wide state
+@EnvironmentObject var authState: AuthState
+
+// ✅ @Published in ViewModels for reactive updates
+class TimerViewModel: ObservableObject {
+    @Published var remainingTime: TimeInterval = 0
+}
+```
+
+### View Composition
+```swift
+// ✅ Extract reusable components
+struct MeditationCard: View {
+    let meditation: Meditation
+    var body: some View { ... }
+}
+
+// ✅ Use ViewModifier for common styles
+struct CardStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding()
+            .background(.ultraThinMaterial)
+            .cornerRadius(12)
+    }
+}
+
+// ✅ Keep body clean, extract complex views
+var body: some View {
+    VStack {
+        timerCircle
+        controlButtons
+        historyButton
+    }
+}
+
+private var timerCircle: some View { ... }
+private var controlButtons: some View { ... }
+```
+
+### Previews
+```swift
+// ✅ Always add previews for views
+#Preview {
+    TimerView()
+}
+
+// ✅ Preview with sample data
+#Preview {
+    MeditationCard(meditation: Meditation.sampleData)
+}
+
+// ✅ Preview multiple states
+#Preview("Light Mode") {
+    HistoryView()
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode") {
+    HistoryView()
+        .preferredColorScheme(.dark)
+}
+```
+
+### Native Components Only
+```swift
+// ✅ Use native SwiftUI components
+List, NavigationStack, NavigationLink
+Button, Label, Text
+Picker, DatePicker, TextField
+VStack, HStack, ZStack
+Form, Section, Toggle
+
+// ✅ SF Symbols for icons
+Image(systemName: "timer")
+Image(systemName: "list.bullet")
+
+// ❌ Avoid custom buttons/pickers without good reason
+// ❌ Don't reinvent native components
+```
+
+---
+
+## MVVM Architecture
+
+### Separation of Concerns
+
+#### Views (SwiftUI)
+```swift
+// ✅ Views contain ONLY UI logic
+// ✅ No business logic in views
+// ✅ Minimal state management
+// ✅ Delegate work to ViewModel
+
+struct TimerView: View {
+    @StateObject private var viewModel = TimerViewModel()
+    
+    var body: some View {
+        VStack {
+            Text("\(viewModel.formattedTime)")
+            Button("Start") {
+                viewModel.startTimer()
+            }
+        }
+    }
+}
+```
+
+#### ViewModels
+```swift
+// ✅ ViewModels inherit from ObservableObject
+// ✅ @Published properties for UI updates
+// ✅ Business logic lives here
+// ✅ Call Services, never directly access network/DB
+
+@MainActor
+class TimerViewModel: ObservableObject {
+    @Published var remainingTime: TimeInterval = 0
+    @Published var isRunning: Bool = false
+    
+    private let supabaseService: SupabaseService
+    
+    init(supabaseService: SupabaseService = .shared) {
+        self.supabaseService = supabaseService
+    }
+    
+    func startTimer() {
+        isRunning = true
+        // Timer logic...
+    }
+    
+    func saveMeditation() async {
+        do {
+            try await supabaseService.insertMeditation(...)
+        } catch {
+            // Handle error
+        }
+    }
+    
+    var formattedTime: String {
+        // Computed property for UI
+    }
+}
+```
+
+#### Services
+```swift
+// ✅ Services are actor or class (thread-safe)
+// ✅ No UI dependencies
+// ✅ Single responsibility
+// ✅ Protocol-based for testability
+
+protocol MeditationServiceProtocol {
+    func fetchMeditations(for userId: String) async throws -> [Meditation]
+    func insertMeditation(_ meditation: Meditation) async throws
+}
+
+actor SupabaseService: MeditationServiceProtocol {
+    static let shared = SupabaseService()
+    
+    private let client: SupabaseClient
+    
+    private init() {
+        self.client = SupabaseClient(
+            supabaseURL: URL(string: Config.supabaseURL)!,
+            supabaseKey: Config.supabaseAnonKey
+        )
+    }
+    
+    func fetchMeditations(for userId: String) async throws -> [Meditation] {
+        // Supabase query
+    }
+}
+```
+
+#### Models
+```swift
+// ✅ Models are structs (value types)
+// ✅ Codable for JSON encoding/decoding
+// ✅ Identifiable for SwiftUI lists
+// ✅ Computed properties OK
+// ✅ Immutable where possible
+
+struct Meditation: Codable, Identifiable, Equatable {
+    let id: UUID
+    let userId: String
+    let startTime: Date
+    let endTime: Date
+    let pose: MeditationPose
+    let place: MeditationPlace
+    let note: String?
+    let createdAt: Date
+    
+    // ✅ Computed property
+    var duration: TimeInterval {
+        endTime.timeIntervalSince(startTime)
+    }
+    
+    // ✅ Sample data for previews
+    static let sampleData = Meditation(
+        id: UUID(),
+        userId: "sample-user",
+        startTime: Date().addingTimeInterval(-600),
+        endTime: Date(),
+        pose: .burmese,
+        place: .home,
+        note: "Sample meditation",
+        createdAt: Date()
+    )
+}
+```
+
+---
+
+## Supabase Integration
+
+### Setup
+```swift
+// Config.swift (in .gitignore)
+enum Config {
+    static let supabaseURL = "https://your-project.supabase.co"
+    static let supabaseAnonKey = "your-anon-key"
+}
+```
+
+### Client Usage
+```swift
+// ✅ Use async/await
+let meditations: [Meditation] = try await client
+    .from("meditations")
+    .select()
+    .eq("user_id", value: userId)
+    .execute()
+    .value
+
+// ✅ Error handling
+do {
+    try await supabaseService.insertMeditation(meditation)
+} catch {
+    print("Error saving meditation: \(error.localizedDescription)")
+}
+
+// ✅ Use Result type for non-throwing methods
+func validateAndSave() -> Result<Void, Error> {
+    // validation logic
+}
+```
+
+### Authentication
+```swift
+// Apple Sign In integration
+func signInWithApple() async throws {
+    let appleIDCredential = try await performAppleSignIn()
+    let session = try await client.auth.signInWithIdToken(
+        credentials: .init(
+            provider: .apple,
+            idToken: appleIDCredential.identityToken
+        )
+    )
+}
+```
+
+---
+
+## UI/UX Guidelines
+
+### iOS Human Interface Guidelines
+- Follow Apple's HIG for iOS 17+
+- Use native patterns (navigation, gestures)
+- Respect system settings (text size, reduce motion)
+- Support accessibility (VoiceOver, Dynamic Type)
+
+### Design System
+```swift
+// ✅ Use system colors
+.foregroundStyle(.primary)
+.foregroundStyle(.secondary)
+.tint(.accent)
+
+// ✅ Use system fonts (SF Pro)
+.font(.title)
+.font(.body)
+.font(.caption)
+
+// ✅ Use system spacing
+.padding()  // 16pt default
+.padding(.vertical, 8)
+
+// ✅ SF Symbols
+Image(systemName: "timer.circle.fill")
+```
+
+### Light/Dark Mode
+```swift
+// ✅ Automatic support with system colors
+// ✅ Test both modes in previews
+// ✅ Use semantic colors, not hardcoded
+
+// ❌ Don't hardcode colors
+// ❌ Don't use Color(red:green:blue:)
+```
+
+### Haptic Feedback
+```swift
+// ✅ Use for important actions
+let generator = UIImpactFeedbackGenerator(style: .medium)
+generator.impactOccurred()
+
+// ✅ Situations:
+// - Timer start/stop
+// - Meditation saved
+// - Errors/warnings
+```
+
+---
+
+## Data & Formats
+
+### Dates
+```swift
+// ✅ Use Date for all timestamps
+let startTime = Date()
+
+// ✅ ISO 8601 for API/JSON (automatic with Codable)
+let encoder = JSONEncoder()
+encoder.dateEncodingStrategy = .iso8601
+
+// ✅ Format for display
+startTime.formatted(date: .abbreviated, time: .shortened)
+// "Dec 28, 2025, 3:30 PM"
+```
+
+### Markdown (для заметок)
+```swift
+// ✅ Store as String
+let note = """
+# Meditation Note
+Good focus today. Felt calm.
+"""
+
+// ✅ Structure for future AI parsing
+// Format будет парситься в v2.0
+```
+
+### Identifiers
+```swift
+// ✅ Use UUID for all IDs
+let id = UUID()
+
+// ✅ Use String for user IDs (from Supabase Auth)
+let userId: String = session.user.id
+```
+
+---
+
+## Security
+
+### Keychain
+```swift
+// ✅ Store auth tokens in Keychain
+// ✅ Never store in UserDefaults
+// ✅ Use Supabase SDK (handles automatically)
+```
+
+### Secrets
+```swift
+// ✅ Config.swift in .gitignore
+// ✅ No hardcoded API keys
+// ✅ Use environment variables for CI/CD
+
+// ❌ Never commit Config.swift
+// ❌ Never print sensitive data
+```
+
+### Input Validation
+```swift
+// ✅ Validate on client
+// ✅ Validate on server (Supabase RLS)
+// ✅ Sanitize user input
+
+func validateMeditationNote(_ note: String) -> Bool {
+    note.count <= 500 // max length
+}
+```
+
+---
+
+## Testing (Future)
+
+### Unit Tests
+```swift
+// ✅ Test ViewModels (business logic)
+// ✅ Mock Services
+// ✅ XCTest framework
+
+@testable import monotation
+
+class TimerViewModelTests: XCTestCase {
+    func testTimerStart() async {
+        let viewModel = TimerViewModel()
+        viewModel.startTimer()
+        XCTAssertTrue(viewModel.isRunning)
+    }
+}
+```
+
+### UI Tests
+```swift
+// ✅ Test critical flows
+// - Sign in
+// - Create meditation
+// - View history
+```
+
+---
+
+## Performance
+
+### SwiftUI Optimization
+```swift
+// ✅ Use @Published sparingly (only for UI updates)
+// ✅ Lazy loading for long lists
+List {
+    ForEach(viewModel.meditations) { meditation in
+        MeditationCard(meditation: meditation)
+    }
+}
+
+// ✅ Avoid unnecessary redraws
+// ✅ Use Equatable for models
+```
+
+### Supabase Queries
+```swift
+// ✅ Fetch only needed data
+.select("id, start_time, end_time, pose")
+
+// ✅ Use pagination for large lists
+.range(from: 0, to: 49)  // first 50
+
+// ✅ Index frequently queried columns (on Supabase)
+```
+
+---
+
+## Git Workflow
+
+### Commit Messages
+```
+feat: add timer screen with countdown
+fix: resolve auth token refresh issue
+docs: update README with setup instructions
+style: format TimerViewModel code
+refactor: extract MeditationCard component
+test: add unit tests for TimerViewModel
+chore: update supabase-swift to v2.0
+```
+
+### Branch Naming
+```
+feature/timer-screen
+feature/apple-sign-in
+bugfix/timer-not-stopping
+refactor/meditation-service
+```
+
+---
+
+## Common Patterns
+
+### Loading States
+```swift
+@Published var isLoading = false
+
+func fetchData() async {
+    isLoading = true
+    defer { isLoading = false }
+    
+    // fetch logic
+}
+```
+
+### Error Handling in Views
+```swift
+@State private var errorMessage: String?
+@State private var showError = false
+
+// In ViewModel
+viewModel.saveMeditation { result in
+    switch result {
+    case .success:
+        // success
+    case .failure(let error):
+        errorMessage = error.localizedDescription
+        showError = true
+    }
+}
+
+// In View
+.alert("Error", isPresented: $showError) {
+    Button("OK") { }
+} message: {
+    Text(errorMessage ?? "Unknown error")
+}
+```
+
+---
+
+## Specific to monotation
+
+### Timer Logic
+```swift
+// ✅ Use Timer.publish for UI updates
+private var timer: Publishers.Autoconnect<Timer.TimerPublisher>?
+
+// ✅ Handle background mode (app goes to background)
+// ✅ Local notification when timer completes
+```
+
+### Markdown Structure
+```swift
+// ✅ Consistent format for future AI parsing
+func generateMarkdownNote(meditation: Meditation) -> String {
+    """
+    # Медитация \(meditation.startTime.formatted())
+    
+    - **Длительность**: \(meditation.duration) минут
+    - **Поза**: \(meditation.pose.rawValue)
+    - **Место**: \(meditation.place.displayName)
+    
+    \(meditation.note ?? "")
+    """
+}
+```
+
+### Future AI Integration
+```swift
+// ✅ Keep data structure flexible
+// ✅ Markdown allows rich parsing
+// ✅ Plan for v2.0 analytics service
+```
+
+---
+
+## Quick Reference
+
+### Common Commands
+```bash
+# Open project
+open monotation.xcodeproj
+
+# Clean build
+⌘ + Shift + K
+
+# Build
+⌘ + B
+
+# Run
+⌘ + R
+
+# Test
+⌘ + U
+```
+
+### Xcode Shortcuts
+```
+⌘ + /          - Comment/Uncomment
+⌘ + ]          - Indent
+⌘ + [          - Outdent
+⌘ + Option + [ - Move line up
+⌘ + Option + ] - Move line down
+⌘ + Shift + O  - Open quickly
+⌘ + Shift + J  - Reveal in navigator
+```
+
+---
+
+**Remember:**
+- Keep it simple (минимализм!)
+- Native components only
+- MVVM strict separation
+- Test in Light/Dark mode
+- Prepare for AI in v2.0
+
+**When in doubt:**
+- Check Swift API Design Guidelines
+- Check iOS HIG
+- Ask in chat with @ProjectOverview

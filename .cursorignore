@@ -1,0 +1,87 @@
+# Xcode
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+xcuserdata/
+DerivedData/
+.DS_Store
+*.swp
+*.lock
+*~.nib
+*.moved-aside
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# CocoaPods (if used)
+Pods/
+Podfile.lock
+
+# Carthage (if used)
+Carthage/Build/
+
+# Secrets & Config
+Config.swift
+SupabaseConfig.swift
+Secrets.plist
+*.env
+.env*
+
+# API Keys and Sensitive Data
+**/Config.swift
+**/Secrets.*
+**/*Secret*.swift
+
+# Build artifacts
+build/
+*.ipa
+*.app.dSYM.zip
+*.dSYM
+
+# Temporary files
+*.tmp
+*.bak
+*~
+*.orig
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Archives & Backups
+_archive/
+_backup/
+_old/
+_cursor_setup_guide/
+
+# Documentation build
+docs/_build/
+site/
+
+# Test artifacts
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+
+# Fastlane (if used)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code coverage
+*.lcov
+coverage/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
