@@ -98,6 +98,6 @@ struct MeditationDetailView: View {
 
 // MARK: - Preview
 #Preview {
-    MeditationDetailView(meditation: Meditation.sample)
+    MeditationDetailView(meditation: Meditation.sampleList.first!)
 }
 

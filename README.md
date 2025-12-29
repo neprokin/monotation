@@ -150,7 +150,6 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 - [STATUS.md](STATUS.md) - Текущий прогресс разработки
 - [WORKFLOW.md](WORKFLOW.md) - Development workflow (Cursor + Xcode)
 - [SUPABASE_SETUP.md](SUPABASE_SETUP.md) - Настройка Supabase backend
-- [TESTING_PLAN.md](TESTING_PLAN.md) - План тестирования MVP
 - [.cursor/notepads/](.cursor/notepads/) - Техническая документация для AI
 
 ---
