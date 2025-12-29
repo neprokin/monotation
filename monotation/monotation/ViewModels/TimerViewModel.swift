@@ -84,10 +84,19 @@ class TimerViewModel: ObservableObject {
     func stopTimer() {
         timer?.cancel()
         timer = nil
-        timerState = .idle
-        remainingTime = selectedDuration
-        startTime = nil
-        endTime = nil
+        
+        // If timer was running, save the session and show form
+        if let start = startTime {
+            endTime = Date()
+            timerState = .completed
+            showMeditationForm = true
+        } else {
+            // If timer wasn't started, just reset
+            timerState = .idle
+            remainingTime = selectedDuration
+            startTime = nil
+            endTime = nil
+        }
     }
     
     private func updateTimer() {
@@ -195,6 +204,18 @@ class TimerViewModel: ObservableObject {
     private func triggerHaptic() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
+    }
+    
+    // MARK: - Reset Timer
+    
+    func resetTimer() {
+        timer?.cancel()
+        timer = nil
+        timerState = .idle
+        remainingTime = selectedDuration
+        startTime = nil
+        endTime = nil
+        showMeditationForm = false
     }
     
     // MARK: - Meditation Session Info

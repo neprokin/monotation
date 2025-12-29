@@ -25,6 +25,10 @@ struct TimerView: View {
                 if case .idle = viewModel.timerState {
                     durationSelector
                     startButton
+                } else if case .completed = viewModel.timerState {
+                    // Show controls to start a new session
+                    durationSelector
+                    startButton
                 } else if viewModel.isRunning || viewModel.isPaused {
                     controlButtons
                 }
@@ -45,7 +49,13 @@ struct TimerView: View {
             .sheet(isPresented: $showHistory) {
                 Text("History (coming soon)")
             }
-            .sheet(isPresented: $viewModel.showMeditationForm) {
+            .sheet(
+                isPresented: $viewModel.showMeditationForm,
+                onDismiss: {
+                    // Reset timer after form is dismissed (saved or cancelled)
+                    viewModel.resetTimer()
+                }
+            ) {
                 if let session = viewModel.getMeditationSessionInfo() {
                     MeditationFormView(
                         startTime: session.startTime,
@@ -187,6 +197,7 @@ struct DurationButton: View {
 
 // MARK: - Duration Options
 enum DurationOption: CaseIterable, Identifiable {
+    case threeSeconds  // For testing
     case five
     case ten
     case fifteen
@@ -197,6 +208,7 @@ enum DurationOption: CaseIterable, Identifiable {
     
     var title: String {
         switch self {
+        case .threeSeconds: return "3 сек"
         case .five: return "5 мин"
         case .ten: return "10 мин"
         case .fifteen: return "15 мин"
@@ -207,34 +219,16 @@ enum DurationOption: CaseIterable, Identifiable {
     
     var duration: TimeInterval {
         switch self {
-        case .five: return 300      // 5 * 60
-        case .ten: return 600       // 10 * 60
-        case .fifteen: return 900   // 15 * 60
-        case .twenty: return 1200   // 20 * 60
-        case .thirty: return 1800   // 30 * 60
+        case .threeSeconds: return 3        // For testing
+        case .five: return 300              // 5 * 60
+        case .ten: return 600               // 10 * 60
+        case .fifteen: return 900           // 15 * 60
+        case .twenty: return 1200           // 20 * 60
+        case .thirty: return 1800           // 30 * 60
         }
     }
 }
 
-// MARK: - Placeholder for MeditationFormView
-struct MeditationFormView: View {
-    let startTime: Date
-    let endTime: Date
-    
-    var body: some View {
-        NavigationStack {
-            VStack {
-                Text("Meditation Form")
-                    .font(.title)
-                Text("Start: \(startTime.formatted())")
-                Text("End: \(endTime.formatted())")
-                Text("(Coming soon)")
-            }
-            .navigationTitle("Сохранить медитацию")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
 
 // MARK: - Preview
 #Preview {
