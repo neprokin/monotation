@@ -79,8 +79,7 @@ Cursor (AI)          Xcode (Ты)
 ```
 meditation app/
 ├── monotation/
-│   ├── monotationApp.swift
-│   ├── ContentView.swift
+│   ├── App/monotationApp.swift
 │   └── Assets.xcassets
 └── monotation.xcodeproj/
 ```
@@ -89,7 +88,7 @@ meditation app/
 
 - ✅ Создал правильные папки (Views/, ViewModels/, Models/, Services/)
 - ✅ Организовал файлы по архитектуре MVVM
-- ✅ Создал базовые файлы (Config.example.swift, Extensions)
+- ✅ Создал базовые файлы (Config.swift, Extensions)
 - ✅ Настроил структуру под Swift Package Manager
 
 ### 3. Добавление зависимостей (ТЫ в Xcode) ✅ СДЕЛАНО
@@ -111,11 +110,11 @@ meditation app/
 
 ---
 
-## 🚀 ГОТОВО К РАЗРАБОТКЕ!
+## 🚀 MVP ЗАВЕРШЕН!
 
-**Статус**: Все настроено, можно начинать писать код.  
-**Следующий шаг**: Создание Models (Meditation, Pose, Place)  
-**Смотри**: [STATUS.md](STATUS.md) для текущего прогресса
+**Статус**: ✅ Все основные фичи реализованы и протестированы.  
+**Реализовано**: Models, Timer, Form, History, Services, Supabase  
+**Смотри**: [README.md](README.md) для текущего статуса проекта
 
 ---
 
@@ -214,56 +213,56 @@ AI → Cursor: Редактирует код, добавляет стили
 ```
 meditation app/
 │
-├── PROJECT.md                     # Документация проекта
-├── WORKFLOW.md                    # Этот файл (workflow)
+├── README.md                      # Главная документация
+├── WORKFLOW.md                    # Этот файл (workflow + production)
+├── SUPABASE_SETUP.md              # Настройка backend
 ├── .cursor/                       # Настройки Cursor
 ├── .cursorignore                  # Исключения
 ├── .gitignore                     # Git исключения
 │
-├── monotation.xcodeproj/          # Xcode project (не трогаем вручную)
+├── monotation.xcodeproj/          # Xcode project
 │
-├── monotation/                    # iOS App код
+├── monotation/                    # iOS App код ✅ MVP
 │   │
 │   ├── App/
-│   │   ├── monotationApp.swift   # Entry point
-│   │   └── AppState.swift        # Global state
+│   │   └── monotationApp.swift   # Entry point
 │   │
-│   ├── Views/                     # AI создает/редактирует
-│   │   ├── Auth/
-│   │   │   └── AuthView.swift
+│   ├── Views/                     # ✅ Реализовано
 │   │   ├── Timer/
-│   │   │   ├── TimerView.swift
-│   │   │   └── TimerCircleView.swift
+│   │   │   └── TimerView.swift
 │   │   ├── Meditation/
 │   │   │   └── MeditationFormView.swift
 │   │   └── History/
 │   │       ├── HistoryView.swift
-│   │       └── MeditationCard.swift
+│   │       ├── MeditationCard.swift
+│   │       └── MeditationDetailView.swift
 │   │
-│   ├── ViewModels/                # AI создает/редактирует
-│   │   ├── AuthViewModel.swift
+│   ├── ViewModels/                # ✅ Реализовано
 │   │   ├── TimerViewModel.swift
+│   │   ├── MeditationFormViewModel.swift
 │   │   └── HistoryViewModel.swift
 │   │
-│   ├── Models/                    # AI создает/редактирует
+│   ├── Models/                    # ✅ Реализовано
 │   │   ├── Meditation.swift
 │   │   ├── MeditationPose.swift
 │   │   └── MeditationPlace.swift
 │   │
-│   ├── Services/                  # AI создает/редактирует
+│   ├── Services/                  # ✅ Реализовано
 │   │   ├── SupabaseService.swift
 │   │   ├── AuthService.swift
 │   │   └── NotificationService.swift
 │   │
 │   ├── Config/
-│   │   └── SupabaseConfig.swift  # AI создает (в .gitignore!)
+│   │   └── Config.swift           # Создается вручную (в .gitignore!)
 │   │
-│   ├── Extensions/                # AI создает/редактирует
+│   ├── Extensions/                # ✅ Реализовано
 │   │   ├── Date+Extensions.swift
-│   │   └── View+Extensions.swift
+│   │   └── TimeInterval+Extensions.swift
 │   │
-│   └── Resources/
-│       └── Assets.xcassets        # Ты добавляешь через Xcode UI
+│   ├── Resources/
+│   │   └── Assets.xcassets        # Ты добавляешь через Xcode UI
+│   │
+│   └── monotation.entitlements    # Sign in with Apple
 │
 └── _cursor_setup_guide/           # Архив (не используется)
 ```
