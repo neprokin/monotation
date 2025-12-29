@@ -1,0 +1,226 @@
+//
+//  TimerViewModel.swift
+//  monotation
+//
+//  Timer logic and state management
+//
+
+import Foundation
+import Combine
+import SwiftUI
+
+@MainActor
+class TimerViewModel: ObservableObject {
+    // MARK: - Published Properties
+    
+    @Published var timerState: TimerState = .idle
+    @Published var selectedDuration: TimeInterval = 600 // 10 minutes default
+    @Published var remainingTime: TimeInterval = 600 // Initialize with default duration
+    @Published var showMeditationForm = false
+    
+    // MARK: - Private Properties
+    
+    private var timer: AnyCancellable?
+    private var startTime: Date?
+    private var endTime: Date?
+    private var backgroundEnteredDate: Date?
+    
+    // MARK: - Initialization
+    
+    init() {
+        setupNotificationObservers()
+    }
+    
+    deinit {
+        timer?.cancel()
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Timer Control
+    
+    func selectDuration(_ duration: TimeInterval) {
+        selectedDuration = duration
+        remainingTime = duration
+        // Stay in idle state when selecting, so controls remain visible
+        timerState = .idle
+    }
+    
+    func startTimer() {
+        startTime = Date()
+        remainingTime = selectedDuration
+        timerState = .running(remainingTime: selectedDuration)
+        
+        // Start countdown
+        timer = Timer.publish(every: 0.1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.updateTimer()
+            }
+    }
+    
+    func pauseTimer() {
+        timer?.cancel()
+        timer = nil
+        timerState = .paused(remainingTime: remainingTime)
+    }
+    
+    func resumeTimer() {
+        guard case .paused = timerState else { return }
+        
+        // Adjust startTime to account for pause
+        let pausedDuration = selectedDuration - remainingTime
+        startTime = Date().addingTimeInterval(-pausedDuration)
+        
+        timerState = .running(remainingTime: remainingTime)
+        
+        // Resume countdown
+        timer = Timer.publish(every: 0.1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.updateTimer()
+            }
+    }
+    
+    func stopTimer() {
+        timer?.cancel()
+        timer = nil
+        timerState = .idle
+        remainingTime = selectedDuration
+        startTime = nil
+        endTime = nil
+    }
+    
+    private func updateTimer() {
+        guard let startTime = startTime else { return }
+        
+        let elapsed = Date().timeIntervalSince(startTime)
+        remainingTime = max(0, selectedDuration - elapsed)
+        
+        if remainingTime <= 0 {
+            completeTimer()
+        }
+    }
+    
+    private func completeTimer() {
+        timer?.cancel()
+        timer = nil
+        endTime = Date()
+        timerState = .completed
+        
+        // Trigger notification and haptic
+        triggerHaptic()
+        scheduleCompletionNotification()
+        
+        // Show meditation form
+        showMeditationForm = true
+    }
+    
+    // MARK: - Computed Properties
+    
+    var formattedTime: String {
+        remainingTime.asMinutesSeconds
+    }
+    
+    var progress: Double {
+        guard selectedDuration > 0 else { return 0 }
+        return 1 - (remainingTime / selectedDuration)
+    }
+    
+    var isRunning: Bool {
+        if case .running = timerState { return true }
+        return false
+    }
+    
+    var isPaused: Bool {
+        if case .paused = timerState { return true }
+        return false
+    }
+    
+    // MARK: - Background Mode Handling
+    
+    private func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func appDidEnterBackground() {
+        guard isRunning else { return }
+        backgroundEnteredDate = Date()
+        scheduleTimerNotification()
+    }
+    
+    @objc private func appWillEnterForeground() {
+        guard let backgroundDate = backgroundEnteredDate, isRunning else { return }
+        
+        // Calculate time spent in background
+        let timeInBackground = Date().timeIntervalSince(backgroundDate)
+        remainingTime = max(0, remainingTime - timeInBackground)
+        
+        if remainingTime <= 0 {
+            completeTimer()
+        }
+        
+        backgroundEnteredDate = nil
+        cancelTimerNotification()
+    }
+    
+    // MARK: - Notifications
+    
+    private func scheduleTimerNotification() {
+        // Will implement with NotificationService
+        // For now, placeholder
+    }
+    
+    private func cancelTimerNotification() {
+        // Will implement with NotificationService
+    }
+    
+    private func scheduleCompletionNotification() {
+        // Will implement with NotificationService
+    }
+    
+    // MARK: - Haptic Feedback
+    
+    private func triggerHaptic() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+    }
+    
+    // MARK: - Meditation Session Info
+    
+    func getMeditationSessionInfo() -> (startTime: Date, endTime: Date)? {
+        guard let start = startTime, let end = endTime else { return nil }
+        return (start, end)
+    }
+}
+
+// MARK: - Timer State
+enum TimerState: Equatable {
+    case idle
+    case selecting(duration: TimeInterval)
+    case running(remainingTime: TimeInterval)
+    case paused(remainingTime: TimeInterval)
+    case completed
+    
+    var isRunning: Bool {
+        if case .running = self { return true }
+        return false
+    }
+    
+    var isPaused: Bool {
+        if case .paused = self { return true }
+        return false
+    }
+}
+

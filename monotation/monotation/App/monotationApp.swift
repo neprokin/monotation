@@ -11,7 +11,8 @@ import SwiftUI
 struct monotationApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            TimerView()
+                .tint(.primary) // Monochrome accent color
         }
     }
 }
