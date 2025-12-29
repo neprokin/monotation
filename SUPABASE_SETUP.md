@@ -31,11 +31,26 @@
 
 ---
 
-## 📋 Шаг 3: Настройка Config.swift
+## 📋 Шаг 3: Создание и настройка Config.swift
 
-1. Откройте файл `monotation/monotation/Config/Config.swift` в Xcode
-2. Замените `YOUR_SUPABASE_URL_HERE` на ваш Project URL
-3. Замените `YOUR_SUPABASE_ANON_KEY_HERE` на ваш anon public key
+1. **Создайте файл в Xcode:**
+   - File → New → File → Swift File
+   - Название: `Config.swift`
+   - Сохранить в: `monotation/monotation/Config/`
+
+2. **Вставьте следующий код:**
+   ```swift
+   import Foundation
+
+   enum SupabaseConfig {
+       static let url = "YOUR_SUPABASE_URL_HERE"
+       static let anonKey = "YOUR_SUPABASE_ANON_KEY_HERE"
+   }
+   ```
+
+3. **Замените placeholder значения:**
+   - `YOUR_SUPABASE_URL_HERE` → ваш Project URL
+   - `YOUR_SUPABASE_ANON_KEY_HERE` → ваш anon public key
 
 **Пример:**
 ```swift

@@ -65,8 +65,7 @@ monotation/
     ├── Models/                    # (пусто, следующий шаг)
     ├── Services/                  # (пусто, позже)
     ├── Config/
-    │   ├── Config.example.swift  # Шаблон конфига (с инструкциями)
-    │   └── Config.swift          # Реальные ключи (создать вручную, в .gitignore)
+    │   └── Config.swift          # Supabase ключи (создать вручную, в .gitignore)
     ├── Extensions/
     │   ├── Date+Extensions.swift        # Расширения для дат
     │   └── TimeInterval+Extensions.swift # Расширения для времени

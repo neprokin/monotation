@@ -60,8 +60,15 @@
    - 📖 **Подробная инструкция**: [SUPABASE_SETUP.md](SUPABASE_SETUP.md)
    - Кратко:
      - Создай проект на [supabase.com](https://supabase.com)
-     - В Xcode: создай `Config.swift` из `Config.example.swift`
-     - Добавь свои Supabase URL и Anon Key в `Config.swift`
+     - В Xcode: создай `Config.swift` в папке `Config/` со следующим содержимым:
+       ```swift
+       import Foundation
+       enum SupabaseConfig {
+           static let url = "YOUR_SUPABASE_URL_HERE"
+           static let anonKey = "YOUR_SUPABASE_ANON_KEY_HERE"
+       }
+       ```
+     - Замени `YOUR_SUPABASE_URL_HERE` и `YOUR_SUPABASE_ANON_KEY_HERE` на реальные ключи
      - Выполни SQL из `SUPABASE_SETUP.md` для создания таблицы
 
 4. **Настрой Signing:**
