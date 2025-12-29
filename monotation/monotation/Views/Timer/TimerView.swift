@@ -47,7 +47,7 @@ struct TimerView: View {
                 }
             }
             .sheet(isPresented: $showHistory) {
-                Text("History (coming soon)")
+                HistoryView()
             }
             .sheet(
                 isPresented: $viewModel.showMeditationForm,
