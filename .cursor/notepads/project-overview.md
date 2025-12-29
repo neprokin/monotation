@@ -171,14 +171,14 @@ App Launch
 
 ## Roadmap
 
-### ✅ Phase 1 - MVP (Current)
-**Timeline**: 2-3 weeks
-**Goal**: Working app with core functionality
-- Timer with countdown
-- Save meditation (form)
-- History list
-- Apple Sign In
-- Supabase backend
+### ✅ Phase 1 - MVP (Completed)
+**Timeline**: 2-3 weeks ✅
+**Goal**: Working app with core functionality ✅
+- ✅ Timer with countdown
+- ✅ Save meditation (form)
+- ✅ History list
+- ⏳ Apple Sign In (optional for v1.0)
+- ✅ Supabase backend
 
 ### 📋 Phase 2 - Polish (v1.1)
 **Timeline**: 1 week after MVP
