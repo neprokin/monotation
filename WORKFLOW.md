@@ -100,12 +100,13 @@ meditation app/
    Version: 2.39.0
 ```
 
-### 4. Настройка Capabilities (ТЫ в Xcode) ✅ СДЕЛАНО
+### 4. Настройка Capabilities (ТЫ в Xcode) ⏭️ ОТЛОЖЕНО
 
 ```
-✅ Sign in with Apple capability добавлена
-   Signing & Capabilities → + Capability
-   Sign in with Apple (снял Automatically manage signing)
+⏭️ Sign in with Apple capability НЕ добавлена (для MVP)
+   Причина: Personal Team не поддерживает Apple Sign In
+   Когда добавить: при переходе на платный Apple Developer Account ($99/год)
+   См. раздел "Production & Release" → Этап 1
 ```
 
 ---
