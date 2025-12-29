@@ -56,6 +56,10 @@ class AuthService: NSObject, ObservableObject {
     
     // MARK: - Apple Sign In
     
+    // TODO: Complete Apple Sign In implementation
+    // - Create AuthView for UI
+    // - Complete delegate setup
+    // - Configure Apple Sign In in Supabase (see SUPABASE_SETUP.md Step 5)
     func signInWithApple() async throws {
         let isAvailable = await supabaseService.isAvailable
         guard isAvailable else {

@@ -2,7 +2,7 @@
 
 > Путеводитель по всем файлам проекта monotation
 
-**Последнее обновление**: 28 декабря 2025
+**Последнее обновление**: 29 декабря 2025
 
 ---
 
@@ -12,8 +12,8 @@
 | Файл | Назначение | Когда читать |
 |------|-----------|--------------|
 | **README.md** | GitHub главная страница | Обзор проекта, быстрый старт |
-| **NEXT_STEPS.md** | Как продолжить разработку | **НАЧИНАЙ ОТСЮДА** при возобновлении |
-| **STATUS.md** | Текущий прогресс проекта | Проверить что сделано/осталось |
+| **STATUS.md** | Текущий прогресс проекта | **НАЧИНАЙ ОТСЮДА** - проверь что сделано/осталось |
+| **PROJECT_ANALYSIS.md** | Анализ проекта | Обзор структуры, рекомендации по очистке |
 
 ### Подробная документация:
 | Файл | Назначение | Когда читать |
@@ -55,22 +55,38 @@
 ### Структура:
 ```
 monotation/
-├── monotation.xcodeproj/          # Xcode project (не редактируем вручную)
+├── monotation.xcodeproj/          # Xcode project
 └── monotation/                    # Исходный код app
     ├── App/
     │   └── monotationApp.swift   # Entry point (@main)
     ├── Views/
-    │   └── ContentView.swift     # Первый экран (будет заменен)
-    ├── ViewModels/                # (пусто, будем создавать)
-    ├── Models/                    # (пусто, следующий шаг)
-    ├── Services/                  # (пусто, позже)
-    ├── Config/
-    │   └── Config.swift          # Supabase ключи (создать вручную, в .gitignore)
+    │   ├── Timer/
+    │   │   └── TimerView.swift   # Главный экран с таймером
+    │   ├── Meditation/
+    │   │   └── MeditationFormView.swift  # Форма сохранения медитации
+    │   └── History/
+    │       ├── HistoryView.swift  # Экран истории медитаций
+    │       ├── MeditationCard.swift  # Карточка медитации в списке
+    │       └── MeditationDetailView.swift  # Детальный просмотр медитации
+    ├── ViewModels/
+    │   ├── TimerViewModel.swift  # Логика таймера
+    │   ├── MeditationFormViewModel.swift  # Логика формы
+    │   └── HistoryViewModel.swift  # Логика истории
+    ├── Models/
+    │   ├── Meditation.swift  # Основная модель медитации
+    │   ├── MeditationPose.swift  # Enum поз медитации
+    │   └── MeditationPlace.swift  # Enum места медитации
+    ├── Services/
+    │   ├── SupabaseService.swift  # CRUD операции с Supabase
+    │   ├── AuthService.swift  # Аутентификация (Apple Sign In)
+    │   └── NotificationService.swift  # Локальные уведомления
     ├── Extensions/
-    │   ├── Date+Extensions.swift        # Расширения для дат
-    │   └── TimeInterval+Extensions.swift # Расширения для времени
+    │   ├── Date+Extensions.swift  # Расширения для дат
+    │   └── TimeInterval+Extensions.swift  # Расширения для времени
+    ├── Config/
+    │   └── Config.swift  # Supabase ключи (не коммитится, в .gitignore)
     └── Resources/
-        └── Assets.xcassets        # Ресурсы (иконки, цвета)
+        └── Assets.xcassets  # Ресурсы (иконки, цвета)
 ```
 
 ---
@@ -81,7 +97,6 @@ monotation/
 |------|-----------|-----------|
 | **.gitignore** | Исключения для Git (Xcode, секреты) | ✅ Да |
 | **.cursorignore** | Исключения для Cursor | ✅ Да |
-| **Config.example.swift** | Шаблон конфига (без секретов) | ✅ Да |
 | **Config.swift** | Реальные ключи Supabase | ❌ НЕТ (в .gitignore) |
 
 ---
@@ -90,7 +105,7 @@ monotation/
 
 | Папка | Содержимое | Нужен? |
 |-------|------------|--------|
-| **_cursor_setup_guide/** | Оригинальный гайд по настройке Cursor (6 файлов) | Для справки, можно удалить |
+| **_cursor_setup_guide/** | Оригинальный гайд по настройке Cursor | Для справки, можно удалить |
 
 ---
 
@@ -100,10 +115,11 @@ monotation/
 1. **README.md** - получи обзор
 2. **PROJECT.md** - изучи детали
 3. **WORKFLOW.md** - пойми как работать
+4. **SUPABASE_SETUP.md** - настрой backend
 
 ### Вернулся после перерыва:
-1. **NEXT_STEPS.md** ← **НАЧНИ ОТСЮДА!**
-2. **STATUS.md** - проверь прогресс
+1. **STATUS.md** ← **НАЧНИ ОТСЮДА!**
+2. **PROJECT_ANALYSIS.md** - проверь структуру проекта
 
 ### Во время разработки:
 1. **WORKFLOW.md** - как работать с Cursor + Xcode
@@ -116,7 +132,8 @@ monotation/
 
 ### Проблемы:
 1. **WORKFLOW.md** → раздел "Troubleshooting"
-2. Спроси AI в Cursor
+2. **SUPABASE_SETUP.md** → раздел "Troubleshooting"
+3. Спроси AI в Cursor
 
 ---
 
@@ -128,22 +145,24 @@ README.md:              6.3 KB   (GitHub главная)
 PROJECT.md:            17   KB   (полная спецификация)
 WORKFLOW.md:           16   KB   (workflow разработки)
 STATUS.md:             7.7  KB   (текущий прогресс)
-NEXT_STEPS.md:         6.2  KB   (как продолжить)
 GIT_SETUP.md:          12   KB   (git инструкции)
+SUPABASE_SETUP.md:     8    KB   (настройка backend)
+PROJECT_ANALYSIS.md:   5    KB   (анализ проекта)
 ─────────────────────────────
-Итого документации:    ~65  KB
+Итого документации:    ~72  KB
 ```
 
 ### Код:
 ```
-Swift файлы:           5 файлов
-  - monotationApp.swift
-  - ContentView.swift
-  - Config.example.swift
-  - Date+Extensions.swift
-  - TimeInterval+Extensions.swift
+Swift файлы:           17 файлов
+  - App:                1 файл
+  - Views:              5 файлов
+  - ViewModels:         3 файла
+  - Models:             3 файла
+  - Services:           3 файла
+  - Extensions:         2 файла
 
-Строк кода:            ~200 строк
+Строк кода:            ~2000+ строк
 Xcode project:         1 проект
 ```
 
@@ -157,8 +176,8 @@ Notepads:              58 KB   (4 файла)
 
 ### Git:
 ```
-Коммитов:              4
-Файлов под Git:        ~30 файлов
+Коммитов:              ~10+
+Файлов под Git:        ~50+ файлов
 GitHub:                github.com/neprokin/monotation
 ```
 
@@ -173,7 +192,7 @@ open -a Cursor .
 open monotation/monotation.xcodeproj
 
 # 2. Прочитай
-open NEXT_STEPS.md
+open STATUS.md
 
 # 3. Скажи AI
 "Продолжаем разработку monotation"
@@ -181,5 +200,17 @@ open NEXT_STEPS.md
 
 ---
 
-**Все файлы актуальны и готовы к использованию!** ✨
+## ✅ Текущий статус проекта
 
+**MVP функционал работает:**
+- ✅ Таймер медитации
+- ✅ Сохранение медитаций в Supabase
+- ✅ История медитаций
+- ✅ Детальный просмотр медитации
+
+**Что осталось:**
+- ⏳ Auth Screen (опционально для MVP)
+- ⏳ Улучшения UI/UX
+- ⏳ Тестирование на реальном устройстве
+
+**Все файлы актуальны и готовы к использованию!** ✨

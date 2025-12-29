@@ -2,7 +2,8 @@
 
 > Текущий статус разработки monotation
 
-**Последнее обновление**: 29 декабря 2025
+**Последнее обновление**: 29 декабря 2025  
+**Версия**: MVP (Backend Integration Complete)
 
 ---
 
@@ -103,11 +104,26 @@
   - [x] Исправление декодинга PostgreSQL INTERVAL
   - [x] Тестирование сохранения и загрузки медитаций ✅
 
+#### **6. Code Organization** ✅
+- [x] Удален неиспользуемый ContentView.swift
+- [x] Вынесен MeditationDetailView в отдельный файл
+- [x] Добавлены TODO комментарии в AuthService
+- [x] Обновлена документация (FILES_INDEX.md)
+- [x] Удален устаревший NEXT_STEPS.md
+- [x] Создан PROJECT_ANALYSIS.md
+
 ### ⏳ Следующие шаги:
 
-#### **6. Auth Screen** (опционально для MVP)
+#### **7. Auth Screen** (опционально для MVP)
 - [ ] Views/Auth/AuthView.swift
 - [ ] ViewModels/AuthViewModel.swift
+- [ ] Настройка Apple Sign In в Supabase (см. SUPABASE_SETUP.md Шаг 5)
+
+#### **8. Polish & Testing**
+- [ ] Тестирование на реальном устройстве
+- [ ] Улучшения UI/UX
+- [ ] Исправление багов
+- [ ] Подготовка к релизу
 
 ---
 
