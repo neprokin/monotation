@@ -117,10 +117,11 @@
 - [ ] ViewModels/AuthViewModel.swift
 - [ ] Настройка Apple Sign In в Supabase (см. SUPABASE_SETUP.md Шаг 5)
 
-#### **8. Polish & Testing**
+#### **8. Testing & Polish** (текущий этап)
+- [ ] Тестирование всех функций MVP (см. TESTING_PLAN.md)
 - [ ] Тестирование на реальном устройстве
+- [ ] Исправление найденных багов
 - [ ] Улучшения UI/UX
-- [ ] Исправление багов
 - [ ] Подготовка к релизу
 
 ---
