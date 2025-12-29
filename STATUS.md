@@ -2,7 +2,7 @@
 
 > Текущий статус разработки monotation
 
-**Последнее обновление**: 28 декабря 2025, 21:45
+**Последнее обновление**: 29 декабря 2025
 
 ---
 
@@ -64,31 +64,32 @@
 
 ## 📋 СЛЕДУЮЩИЙ ШАГ: Разработка
 
-### Готово начинать разработку с:
+### ✅ Завершено:
 
-#### **1. Models** (следующий этап)
-Создать 3 файла:
-- [ ] Models/Meditation.swift
-- [ ] Models/MeditationPose.swift
-- [ ] Models/MeditationPlace.swift
+#### **1. Models** ✅
+- [x] Models/Meditation.swift
+- [x] Models/MeditationPose.swift
+- [x] Models/MeditationPlace.swift
 
-**Детали в:** `.cursor/notepads/data-models.md`
+#### **2. Timer Screen** ✅
+- [x] Views/Timer/TimerView.swift
+- [x] ViewModels/TimerViewModel.swift
+- [x] Timer с выбором длительности, обратным отсчетом, монохромным дизайном
 
-#### **2. Timer Screen**
-- [ ] Views/Timer/TimerView.swift
-- [ ] ViewModels/TimerViewModel.swift
-- [ ] Views/Timer/TimerCircleView.swift (visual countdown)
+#### **3. Meditation Form** ✅
+- [x] Views/Meditation/MeditationFormView.swift
+- [x] ViewModels/MeditationFormViewModel.swift
+- [x] Валидация, выбор позы/места, заметка
 
-#### **3. Meditation Form**
-- [ ] Views/Meditation/MeditationFormView.swift
-- [ ] ViewModels/MeditationFormViewModel.swift
+#### **4. History Screen** ✅
+- [x] Views/History/HistoryView.swift
+- [x] ViewModels/HistoryViewModel.swift
+- [x] Views/History/MeditationCard.swift
+- [x] Группировка по датам, статистика, детальный просмотр
 
-#### **4. History Screen**
-- [ ] Views/History/HistoryView.swift
-- [ ] ViewModels/HistoryViewModel.swift
-- [ ] Views/History/MeditationCard.swift
+### ⏳ Следующие шаги:
 
-#### **5. Services (Backend)**
+#### **5. Services (Backend)** (следующий этап)
 - [ ] Services/SupabaseService.swift
 - [ ] Services/AuthService.swift
 - [ ] Services/NotificationService.swift
