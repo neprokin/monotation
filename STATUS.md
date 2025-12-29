@@ -87,14 +87,20 @@
 - [x] Views/History/MeditationCard.swift
 - [x] Группировка по датам, статистика, детальный просмотр
 
+### ✅ Завершено (продолжение):
+
+#### **5. Services (Backend)** ✅
+- [x] Services/SupabaseService.swift
+- [x] Services/AuthService.swift
+- [x] Services/NotificationService.swift
+- [x] Интеграция Services в ViewModels:
+  - [x] MeditationFormViewModel → SupabaseService для сохранения
+  - [x] HistoryViewModel → SupabaseService для загрузки
+  - [x] TimerViewModel → NotificationService для уведомлений
+
 ### ⏳ Следующие шаги:
 
-#### **5. Services (Backend)** (следующий этап)
-- [ ] Services/SupabaseService.swift
-- [ ] Services/AuthService.swift
-- [ ] Services/NotificationService.swift
-
-#### **6. Auth Screen**
+#### **6. Auth Screen** (опционально для MVP)
 - [ ] Views/Auth/AuthView.swift
 - [ ] ViewModels/AuthViewModel.swift
 

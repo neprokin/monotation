@@ -21,6 +21,11 @@ class MeditationFormViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showError = false
     
+    // MARK: - Private Properties
+    
+    private let supabaseService = SupabaseService.shared
+    private let authService = AuthService.shared
+    
     // MARK: - Session Info
     
     let startTime: Date
@@ -79,11 +84,10 @@ class MeditationFormViewModel: ObservableObject {
             // Create meditation object
             let meditation = createMeditation()
             
-            // TODO: Save to Supabase when service is ready
-            // For now, just simulate success
-            try await Task.sleep(nanoseconds: 500_000_000) // 0.5s delay
+            // Save to Supabase
+            try await supabaseService.insertMeditation(meditation)
             
-            print("✅ Meditation saved:", meditation.asMarkdown)
+            print("✅ Meditation saved to Supabase:", meditation.asMarkdown)
             
             return true
         } catch {
@@ -105,9 +109,12 @@ class MeditationFormViewModel: ObservableObject {
         
         let noteText = note.trimmingCharacters(in: .whitespaces)
         
+        // Get user ID from auth service, or use temporary ID if not authenticated
+        let userId = authService.currentUserId ?? "temp-user-id"
+        
         return Meditation(
             id: UUID(),
-            userId: "temp-user-id", // TODO: Replace with actual user ID from auth
+            userId: userId,
             startTime: startTime,
             endTime: endTime,
             pose: selectedPose,
@@ -139,4 +146,3 @@ class MeditationFormViewModel: ObservableObject {
         note.count <= 500
     }
 }
-

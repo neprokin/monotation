@@ -15,12 +15,16 @@ actor SupabaseService {
     
     private init() {
         // Initialize client only if config is available
-        if let url = URL(string: SupabaseConfig.url),
-           !SupabaseConfig.url.contains("YOUR_SUPABASE_URL_HERE"),
-           !SupabaseConfig.anonKey.contains("YOUR_SUPABASE_ANON_KEY_HERE") {
+        // Access config values (assuming Config is nonisolated or accessed safely)
+        let configURL = MainActor.assumeIsolated { SupabaseConfig.url }
+        let configKey = MainActor.assumeIsolated { SupabaseConfig.anonKey }
+        
+        if let url = URL(string: configURL),
+           !configURL.contains("YOUR_SUPABASE_URL_HERE"),
+           !configKey.contains("YOUR_SUPABASE_ANON_KEY_HERE") {
             self.client = SupabaseClient(
                 supabaseURL: url,
-                supabaseKey: SupabaseConfig.anonKey
+                supabaseKey: configKey
             )
         } else {
             // Config not set up yet, client will be nil
@@ -50,7 +54,7 @@ actor SupabaseService {
     func fetchMeditations(for userId: String) async throws -> [Meditation] {
         guard let client = client else {
             // Return sample data if Supabase not configured
-            return Meditation.sampleList
+            return await MainActor.run { Meditation.sampleList }
         }
         
         do {
@@ -63,8 +67,10 @@ actor SupabaseService {
                 .execute()
                 .value
             
-            // Convert DB models to app models
-            return response.map { $0.toMeditation() }
+            // Convert DB models to app models (need MainActor for MeditationPlace.from)
+            return await MainActor.run {
+                response.map { $0.toMeditation() }
+            }
         } catch {
             print("❌ SupabaseService.fetchMeditations error: \(error)")
             throw SupabaseError.fetchFailed(error)
@@ -80,7 +86,7 @@ actor SupabaseService {
         }
         
         do {
-            // Convert app model to DB model
+            // Convert app model to DB model (nonisolated struct, safe to use)
             let dbMeditation = MeditationDB(from: meditation)
             
             try await client
@@ -145,7 +151,7 @@ actor SupabaseService {
 // MARK: - Database Model
 
 /// Database representation of Meditation (matches Supabase schema)
-private struct MeditationDB: Codable {
+private nonisolated struct MeditationDB: Codable {
     let id: UUID
     let userId: UUID  // In DB it's UUID, but we use String in app model
     let startTime: Date
@@ -169,26 +175,29 @@ private struct MeditationDB: Codable {
     }
     
     init(from meditation: Meditation) {
+        // This init is called from actor context, so we can access MainActor properties
         self.id = meditation.id
         // Convert String userId to UUID (assuming it's a valid UUID string)
         self.userId = UUID(uuidString: meditation.userId) ?? UUID()
         self.startTime = meditation.startTime
         self.endTime = meditation.endTime
-        self.duration = meditation.duration
+        // Access duration and storedValue in MainActor context
+        self.duration = MainActor.assumeIsolated { meditation.duration }
         self.pose = meditation.pose.rawValue
-        self.place = meditation.place.storedValue
+        self.place = MainActor.assumeIsolated { meditation.place.storedValue }
         self.note = meditation.note
         self.createdAt = meditation.createdAt
     }
     
     func toMeditation() -> Meditation {
+        // This is called from actor context, so we can use MainActor.assumeIsolated
         Meditation(
             id: id,
             userId: userId.uuidString,
             startTime: startTime,
             endTime: endTime,
             pose: MeditationPose(rawValue: pose) ?? .burmese,
-            place: MeditationPlace.from(place),
+            place: MainActor.assumeIsolated { MeditationPlace.from(place) },
             note: note,
             createdAt: createdAt
         )

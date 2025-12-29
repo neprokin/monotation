@@ -20,6 +20,11 @@ class HistoryViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showError = false
     
+    // MARK: - Private Properties
+    
+    private let supabaseService = SupabaseService.shared
+    private let authService = AuthService.shared
+    
     // MARK: - Initialization
     
     init() {
@@ -29,14 +34,31 @@ class HistoryViewModel: ObservableObject {
     // MARK: - Load Meditations
     
     func loadMeditations() {
+        Task {
+            await loadMeditationsAsync()
+        }
+    }
+    
+    private func loadMeditationsAsync() async {
         isLoading = true
         defer { isLoading = false }
         
-        // TODO: Load from Supabase when service is ready
-        // For now, use sample data
-        meditations = Meditation.sampleList
-        
-        groupMeditations()
+        do {
+            // Get user ID from auth service, or use temporary ID if not authenticated
+            let userId = authService.currentUserId ?? "temp-user-id"
+            
+            // Load from Supabase
+            meditations = try await supabaseService.fetchMeditations(for: userId)
+            
+            groupMeditations()
+        } catch {
+            print("❌ HistoryViewModel.loadMeditations error: \(error)")
+            errorMessage = "Ошибка загрузки медитаций: \(error.localizedDescription)"
+            showError = true
+            // Fallback to sample data on error
+            meditations = Meditation.sampleList
+            groupMeditations()
+        }
     }
     
     // MARK: - Group Meditations by Date
@@ -71,7 +93,7 @@ class HistoryViewModel: ObservableObject {
     // MARK: - Refresh
     
     func refresh() async {
-        loadMeditations()
+        await loadMeditationsAsync()
     }
     
     // MARK: - Computed Properties
@@ -99,4 +121,3 @@ class HistoryViewModel: ObservableObject {
         }
     }
 }
-

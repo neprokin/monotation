@@ -24,6 +24,7 @@ class TimerViewModel: ObservableObject {
     private var startTime: Date?
     private var endTime: Date?
     private var backgroundEnteredDate: Date?
+    private let notificationService = NotificationService.shared
     
     // MARK: - Initialization
     
@@ -49,6 +50,9 @@ class TimerViewModel: ObservableObject {
         startTime = Date()
         remainingTime = selectedDuration
         timerState = .running(remainingTime: selectedDuration)
+        
+        // Schedule notification for timer completion
+        scheduleTimerNotification()
         
         // Start countdown
         timer = Timer.publish(every: 0.1, on: .main, in: .common)
@@ -85,8 +89,11 @@ class TimerViewModel: ObservableObject {
         timer?.cancel()
         timer = nil
         
+        // Cancel notification
+        cancelTimerNotification()
+        
         // If timer was running, save the session and show form
-        if let start = startTime {
+        if startTime != nil {
             endTime = Date()
             timerState = .completed
             showMeditationForm = true
@@ -100,9 +107,9 @@ class TimerViewModel: ObservableObject {
     }
     
     private func updateTimer() {
-        guard let startTime = startTime else { return }
+        guard startTime != nil else { return }
         
-        let elapsed = Date().timeIntervalSince(startTime)
+        let elapsed = Date().timeIntervalSince(startTime!)
         remainingTime = max(0, selectedDuration - elapsed)
         
         if remainingTime <= 0 {
@@ -116,9 +123,11 @@ class TimerViewModel: ObservableObject {
         endTime = Date()
         timerState = .completed
         
-        // Trigger notification and haptic
+        // Cancel scheduled notification (timer completed naturally)
+        cancelTimerNotification()
+        
+        // Trigger haptic feedback
         triggerHaptic()
-        scheduleCompletionNotification()
         
         // Show meditation form
         showMeditationForm = true
@@ -187,16 +196,11 @@ class TimerViewModel: ObservableObject {
     // MARK: - Notifications
     
     private func scheduleTimerNotification() {
-        // Will implement with NotificationService
-        // For now, placeholder
+        notificationService.scheduleTimerCompletionNotification(in: remainingTime)
     }
     
     private func cancelTimerNotification() {
-        // Will implement with NotificationService
-    }
-    
-    private func scheduleCompletionNotification() {
-        // Will implement with NotificationService
+        notificationService.cancelTimerNotification()
     }
     
     // MARK: - Haptic Feedback

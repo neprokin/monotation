@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A76C54652F02CFFA00DEE77E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A76C54642F02CFFA00DEE77E /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		A78C9C912F01AD7B0048B19F /* monotation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = monotation.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,16 +27,25 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A76C54652F02CFFA00DEE77E /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A76C54632F02CFFA00DEE77E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		A78C9C882F01AD7B0048B19F = {
 			isa = PBXGroup;
 			children = (
 				A78C9C932F01AD7B0048B19F /* monotation */,
+				A76C54632F02CFFA00DEE77E /* Frameworks */,
 				A78C9C922F01AD7B0048B19F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -65,6 +78,7 @@
 			);
 			name = monotation;
 			packageProductDependencies = (
+				A76C54642F02CFFA00DEE77E /* Supabase */,
 			);
 			productName = monotation;
 			productReference = A78C9C912F01AD7B0048B19F /* monotation.app */;
@@ -352,6 +366,14 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A76C54642F02CFFA00DEE77E /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A78C9CB52F01B0000048B19F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A78C9C892F01AD7B0048B19F /* Project object */;
 }

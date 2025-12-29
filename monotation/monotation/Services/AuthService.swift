@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import Combine
 import AuthenticationServices
 import Supabase
 
@@ -34,23 +35,19 @@ class AuthService: NSObject, ObservableObject {
     
     func checkAuthState() {
         Task {
-            do {
-                if supabaseService.isAvailable,
-                   let authClient = await supabaseService.authClient {
+            let isAvailable = await supabaseService.isAvailable
+            if isAvailable,
+               let authClient = await supabaseService.authClient {
+                do {
                     let session = try await authClient.session
-                    if let session = session {
-                        await updateUser(from: session.user)
-                    } else {
-                        isAuthenticated = false
-                        currentUser = nil
-                    }
-                } else {
-                    // Supabase not configured, use mock auth
+                    await updateUser(from: session.user)
+                } catch {
+                    // No session - user not logged in
                     isAuthenticated = false
                     currentUser = nil
                 }
-            } catch {
-                print("❌ AuthService.checkAuthState error: \(error)")
+            } else {
+                // Supabase not configured, use mock auth
                 isAuthenticated = false
                 currentUser = nil
             }
@@ -60,7 +57,8 @@ class AuthService: NSObject, ObservableObject {
     // MARK: - Apple Sign In
     
     func signInWithApple() async throws {
-        guard supabaseService.isAvailable else {
+        let isAvailable = await supabaseService.isAvailable
+        guard isAvailable else {
             // Mock sign in for development
             await mockSignIn()
             return
@@ -93,7 +91,8 @@ class AuthService: NSObject, ObservableObject {
     // MARK: - Sign Out
     
     func signOut() async throws {
-        guard supabaseService.isAvailable else {
+        let isAvailable = await supabaseService.isAvailable
+        guard isAvailable else {
             // Mock sign out
             isAuthenticated = false
             currentUser = nil
@@ -131,12 +130,10 @@ class AuthService: NSObject, ObservableObject {
     
     private func mockSignIn() async {
         // Mock user for development when Supabase not configured
-        currentUser = User(
-            id: UUID(),
-            email: "mock@example.com",
-            createdAt: Date()
-        )
+        // Create a simple mock user - we'll use a basic structure
+        // Note: This is a temporary solution until Supabase is configured
         isAuthenticated = true
+        // currentUser will be nil for mock mode, but isAuthenticated = true allows app to work
     }
 }
 
@@ -165,9 +162,7 @@ extension AuthService: ASAuthorizationControllerDelegate {
                         )
                     )
                     
-                    if let session = session {
-                        await updateUser(from: session.user)
-                    }
+                    await updateUser(from: session.user)
                 } catch {
                     errorMessage = error.localizedDescription
                 }
