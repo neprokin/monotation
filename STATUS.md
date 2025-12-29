@@ -19,7 +19,7 @@
 - [x] PROJECT.md создан (полная спецификация проекта)
 - [x] README.md создан (GitHub главная страница)
 - [x] WORKFLOW.md создан (workflow разработки)
-- [x] GIT_SETUP.md создан (git инструкции)
+- [x] Git workflow описан в README.md
 - [x] .cursor/index.mdc настроен (Project Rules для iOS/Swift/SwiftUI)
 - [x] .cursor/notepads/ созданы (4 файла с контекстом)
 - [x] .cursorignore настроен
@@ -108,9 +108,7 @@
 - [x] Удален неиспользуемый ContentView.swift
 - [x] Вынесен MeditationDetailView в отдельный файл
 - [x] Добавлены TODO комментарии в AuthService
-- [x] Обновлена документация (FILES_INDEX.md)
-- [x] Удален устаревший NEXT_STEPS.md
-- [x] Создан PROJECT_ANALYSIS.md
+- [x] Оптимизирована документация (удалены избыточные файлы)
 
 ### ⏳ Следующие шаги:
 

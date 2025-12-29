@@ -121,23 +121,36 @@ git push origin feature/timer-screen
 
 ### Commit Convention
 
+Используем [Conventional Commits](https://www.conventionalcommits.org/):
+
 ```
 feat:     новая функциональность
 fix:      исправление бага
 docs:     изменения в документации
-style:    форматирование кода
-refactor: рефакторинг
+style:    форматирование кода (не влияет на функциональность)
+refactor: рефакторинг кода
 test:     добавление тестов
-chore:    обновление зависимостей
+chore:    обновление зависимостей, конфигурации
+perf:     улучшение производительности
+```
+
+**Примеры:**
+```bash
+git commit -m "feat: add meditation timer with countdown"
+git commit -m "fix: resolve PostgreSQL INTERVAL decoding issue"
+git commit -m "docs: update README with setup instructions"
+git commit -m "refactor: extract MeditationDetailView to separate file"
 ```
 
 ---
 
 ## 📖 Документация
 
-- [PROJECT.md](PROJECT.md) - Полная документация проекта
+- [PROJECT.md](PROJECT.md) - Полная спецификация проекта
+- [STATUS.md](STATUS.md) - Текущий прогресс разработки
 - [WORKFLOW.md](WORKFLOW.md) - Development workflow (Cursor + Xcode)
-- [.cursor/notepads/](.cursor/notepads/) - Техническая документация
+- [SUPABASE_SETUP.md](SUPABASE_SETUP.md) - Настройка Supabase backend
+- [.cursor/notepads/](.cursor/notepads/) - Техническая документация для AI
 
 ---
 
