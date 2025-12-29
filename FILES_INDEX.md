@@ -21,6 +21,7 @@
 | **PROJECT.md** | Полная спецификация проекта | Детали функционала, архитектура, roadmap |
 | **WORKFLOW.md** | Как работать (Cursor + Xcode) | Workflow разработки, troubleshooting |
 | **GIT_SETUP.md** | Git инструкции | Git команды, commit convention |
+| **SUPABASE_SETUP.md** | Настройка Supabase backend | **Перед использованием приложения** |
 
 ---
 
@@ -64,7 +65,8 @@ monotation/
     ├── Models/                    # (пусто, следующий шаг)
     ├── Services/                  # (пусто, позже)
     ├── Config/
-    │   └── Config.example.swift  # Шаблон конфига для Supabase
+    │   ├── Config.example.swift  # Шаблон конфига (с инструкциями)
+    │   └── Config.swift          # Реальные ключи (создать вручную, в .gitignore)
     ├── Extensions/
     │   ├── Date+Extensions.swift        # Расширения для дат
     │   └── TimeInterval+Extensions.swift # Расширения для времени

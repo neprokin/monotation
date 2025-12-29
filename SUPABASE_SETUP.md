@@ -1,0 +1,197 @@
+# Supabase Setup Guide
+
+> Пошаговая инструкция по настройке Supabase для monotation
+
+---
+
+## 📋 Шаг 1: Создание проекта Supabase
+
+1. Перейдите на [supabase.com](https://supabase.com)
+2. Войдите или зарегистрируйтесь
+3. Нажмите **"New Project"**
+4. Заполните:
+   - **Name**: `monotation` (или любое другое)
+   - **Database Password**: создайте надежный пароль (сохраните его!)
+   - **Region**: выберите ближайший регион
+5. Нажмите **"Create new project"**
+6. Дождитесь создания проекта (2-3 минуты)
+
+---
+
+## 📋 Шаг 2: Получение API ключей
+
+1. В Supabase Dashboard откройте ваш проект
+2. Перейдите в **Settings** → **API**
+3. Найдите секцию **"Project API keys"**
+4. Скопируйте:
+   - **Project URL** (например: `https://xxxxx.supabase.co`)
+   - **anon public** key (длинная строка, начинается с `eyJ...`)
+
+⚠️ **Важно**: Используйте только **anon public** key, не **service_role** key!
+
+---
+
+## 📋 Шаг 3: Настройка Config.swift
+
+1. Откройте файл `monotation/monotation/Config/Config.swift` в Xcode
+2. Замените `YOUR_SUPABASE_URL_HERE` на ваш Project URL
+3. Замените `YOUR_SUPABASE_ANON_KEY_HERE` на ваш anon public key
+
+**Пример:**
+```swift
+enum SupabaseConfig {
+    static let url = "https://abcdefghijklmnop.supabase.co"
+    static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjIzOTAyMiwiZXhwIjoxOTMxODE1MDIyfQ.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
+```
+
+4. Сохраните файл (⌘+S)
+
+---
+
+## 📋 Шаг 4: Создание таблицы meditations
+
+1. В Supabase Dashboard перейдите в **SQL Editor**
+2. Нажмите **"New query"**
+3. Скопируйте и вставьте следующий SQL:
+
+```sql
+-- Create meditations table
+CREATE TABLE meditations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ NOT NULL,
+  duration INTERVAL NOT NULL,
+  pose TEXT NOT NULL,
+  place TEXT NOT NULL,
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_meditations_user_id ON meditations(user_id);
+CREATE INDEX idx_meditations_start_time ON meditations(start_time DESC);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE meditations ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can view only their own meditations
+CREATE POLICY "Users can view own meditations"
+  ON meditations FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Policy: Users can insert only their own meditations
+CREATE POLICY "Users can insert own meditations"
+  ON meditations FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Policy: Users can update only their own meditations
+CREATE POLICY "Users can update own meditations"
+  ON meditations FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Policy: Users can delete only their own meditations
+CREATE POLICY "Users can delete own meditations"
+  ON meditations FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+4. Нажмите **"Run"** (или ⌘+Enter)
+5. Должно появиться сообщение "Success. No rows returned"
+
+---
+
+## 📋 Шаг 5: Настройка Apple Sign In в Supabase
+
+1. В Supabase Dashboard перейдите в **Authentication** → **Providers**
+2. Найдите **Apple** в списке провайдеров
+3. Включите Apple provider (toggle switch)
+4. Настройте Apple Developer консоль:
+   - Создайте Service ID в [developer.apple.com](https://developer.apple.com)
+   - Создайте Key для Sign in with Apple
+   - Загрузите Private Key
+5. Добавьте в Supabase:
+   - **Service ID**
+   - **Key ID**
+   - **Team ID**
+   - **Private Key** (содержимое .p8 файла)
+
+📖 **Подробная инструкция**: [Supabase Apple Sign In Guide](https://supabase.com/docs/guides/auth/social-login/auth-apple)
+
+---
+
+## 📋 Шаг 6: Проверка настройки
+
+1. Откройте проект в Xcode
+2. Убедитесь, что `Config.swift` содержит реальные ключи (не `YOUR_SUPABASE_URL_HERE`)
+3. Запустите приложение (⌘+R)
+4. Проверьте консоль Xcode:
+   - ✅ Если видите "✅ SupabaseService initialized" - всё работает
+   - ⚠️ Если видите "⚠️ SupabaseService: Config not set up" - проверьте Config.swift
+
+---
+
+## 🔒 Безопасность
+
+### ✅ Что правильно:
+- `Config.swift` в `.gitignore` - не коммитится в git
+- Используется только **anon public** key (безопасный для клиента)
+- Row Level Security (RLS) включен - пользователи видят только свои данные
+
+### ❌ Что НЕ делать:
+- ❌ Не коммитить `Config.swift` в git
+- ❌ Не использовать **service_role** key в клиентском приложении
+- ❌ Не отключать RLS без необходимости
+
+---
+
+## 🐛 Troubleshooting
+
+### Проблема: "Config not set up"
+**Решение**: Проверьте, что в `Config.swift` реальные ключи, а не placeholder значения.
+
+### Проблема: "Network error" при запросах
+**Решение**: 
+- Проверьте интернет-соединение
+- Убедитесь, что Project URL правильный
+- Проверьте, что проект Supabase активен (не приостановлен)
+
+### Проблема: "RLS policy violation"
+**Решение**: 
+- Убедитесь, что пользователь авторизован
+- Проверьте, что RLS policies созданы (Шаг 4)
+- Проверьте, что `user_id` в запросе совпадает с `auth.uid()`
+
+### Проблема: "Table does not exist"
+**Решение**: 
+- Убедитесь, что таблица `meditations` создана (Шаг 4)
+- Проверьте, что вы в правильном проекте Supabase
+
+---
+
+## 📚 Полезные ссылки
+
+- [Supabase Dashboard](https://supabase.com/dashboard)
+- [Supabase Swift SDK Docs](https://supabase.com/docs/reference/swift/introduction)
+- [Supabase Auth Guide](https://supabase.com/docs/guides/auth)
+- [Row Level Security Guide](https://supabase.com/docs/guides/auth/row-level-security)
+
+---
+
+## ✅ Checklist
+
+Перед использованием приложения убедитесь:
+
+- [ ] Supabase проект создан
+- [ ] API ключи скопированы в `Config.swift`
+- [ ] Таблица `meditations` создана
+- [ ] RLS policies созданы
+- [ ] Apple Sign In настроен (опционально для MVP)
+- [ ] Приложение запускается без ошибок
+- [ ] Консоль показывает успешную инициализацию Supabase
+
+---
+
+**Готово!** Теперь приложение может сохранять медитации в Supabase. 🎉
+

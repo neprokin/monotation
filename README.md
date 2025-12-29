@@ -57,9 +57,12 @@
    ```
 
 3. **Настрой Supabase:**
-   - Создай проект на [supabase.com](https://supabase.com)
-   - Скопируй `Config.example.swift` → `Config.swift`
-   - Добавь свои Supabase URL и Anon Key в `Config.swift`
+   - 📖 **Подробная инструкция**: [SUPABASE_SETUP.md](SUPABASE_SETUP.md)
+   - Кратко:
+     - Создай проект на [supabase.com](https://supabase.com)
+     - В Xcode: создай `Config.swift` из `Config.example.swift`
+     - Добавь свои Supabase URL и Anon Key в `Config.swift`
+     - Выполни SQL из `SUPABASE_SETUP.md` для создания таблицы
 
 4. **Настрой Signing:**
    - В Xcode: Target → Signing & Capabilities
