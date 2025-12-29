@@ -81,29 +81,67 @@
 
 ---
 
-## 📂 Структура проекта
+## 📂 Структура проекта (MVVM)
 
 ```
 monotation/
-├── App/                    # Entry point, global state
-├── Views/                  # SwiftUI views (Auth, Timer, History)
-├── ViewModels/             # Business logic для views
-├── Models/                 # Data models (Meditation, Pose, Place)
-├── Services/               # Backend interaction (Supabase, Auth)
-├── Config/                 # Configuration (не в git!)
-├── Extensions/             # Swift extensions
-└── Resources/              # Assets, localization
+├── App/                           # Entry point
+│   └── monotationApp.swift        # @main
+├── Views/                         # SwiftUI UI
+│   ├── Timer/TimerView.swift      # Главный экран с таймером
+│   ├── Meditation/MeditationFormView.swift  # Форма сохранения
+│   └── History/                   # История медитаций
+│       ├── HistoryView.swift
+│       ├── MeditationCard.swift
+│       └── MeditationDetailView.swift
+├── ViewModels/                    # Business logic
+│   ├── TimerViewModel.swift
+│   ├── MeditationFormViewModel.swift
+│   └── HistoryViewModel.swift
+├── Models/                        # Data models
+│   ├── Meditation.swift
+│   ├── MeditationPose.swift
+│   └── MeditationPlace.swift
+├── Services/                      # Backend & System
+│   ├── SupabaseService.swift      # CRUD с Supabase
+│   ├── AuthService.swift          # Apple Sign In (заготовка)
+│   └── NotificationService.swift  # Локальные уведомления
+├── Extensions/                    # Swift extensions
+│   ├── Date+Extensions.swift
+│   └── TimeInterval+Extensions.swift
+├── Config/                        # Configuration (в .gitignore)
+│   └── Config.swift               # Supabase ключи
+└── Resources/                     # Assets, colors
+    └── Assets.xcassets
+```
+
+---
+
+## 🏗 Архитектура
+
+### MVVM Pattern
+- **Models**: Простые Swift structs (Codable, Identifiable)
+- **Views**: SwiftUI views (декларативный UI)
+- **ViewModels**: ObservableObject (@Published properties, business logic)
+- **Services**: Actor/Class для backend и system интеграции
+
+### Data Flow
+```
+User Action → View → ViewModel → Service → Supabase
+                ↑         ↓
+            @Published  Update
 ```
 
 ---
 
 ## 🔧 Разработка
 
-### Основной workflow
+### Workflow: Cursor + Xcode
 
 1. **AI (Cursor)** пишет код и создает файлы
-2. **Разработчик (Xcode)** тестирует и проверяет
+2. **Разработчик (Xcode)** компилирует и тестирует (⌘+R)
 3. **Итерация**: фидбек → исправления → проверка
+4. **Git commit** после каждой работающей фичи
 
 Подробнее в [WORKFLOW.md](WORKFLOW.md)
 
@@ -146,8 +184,6 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 
 ## 📖 Документация
 
-- [PROJECT.md](PROJECT.md) - Полная спецификация проекта
-- [STATUS.md](STATUS.md) - Текущий прогресс разработки
 - [WORKFLOW.md](WORKFLOW.md) - Development workflow (Cursor + Xcode)
 - [SUPABASE_SETUP.md](SUPABASE_SETUP.md) - Настройка Supabase backend
 - [.cursor/notepads/](.cursor/notepads/) - Техническая документация для AI
@@ -174,21 +210,52 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 **Опционально:**
 - [ ] Apple Sign In (AuthView) - для продакшена
 
-### 📋 v1.1 - Analytics
-- [ ] Статистика (общее время, количество)
-- [ ] Streak tracking
-- [ ] Графики прогресса
+### 📋 v1.1 - Polish & Release
+**Цель**: Подготовка к App Store
+- [ ] Apple Sign In (AuthView)
+- [ ] Production Supabase setup (RLS policies)
+- [ ] App Store Connect setup
+- [ ] TestFlight бета-тестирование
 
-### 📋 v1.2 - UX Improvements
+### 📋 v1.2 - Улучшения UX
+**Цель**: Расширенная функциональность
 - [ ] Редактирование/удаление медитаций
-- [ ] Фильтры в истории
-- [ ] Поиск
+- [ ] Базовая статистика (стрики, графики)
+- [ ] Фильтры и поиск в истории
+- [ ] Настройки (Settings screen)
+- [ ] iPad support
 
 ### 🚀 v2.0 - AI Integration
-- [ ] Анализ паттернов медитаций
-- [ ] NLP анализ заметок
+**Цель**: Интеллектуальный анализ
+- [ ] AI-анализ паттернов медитации (markdown → insights)
 - [ ] Персональные рекомендации
-- [ ] Еженедельные AI-отчеты
+- [ ] Еженедельные/месячные отчеты
+- [ ] Экспорт данных (CSV, PDF)
+
+---
+
+## 🎯 Текущий статус проекта
+
+**Фаза**: MVP v1.0 (95% Complete) ✅
+
+**Что работает:**
+- ✅ Таймер медитации (с выбором времени, обратным отсчетом)
+- ✅ Форма сохранения (поза, место, заметка)
+- ✅ История медитаций (группировка по датам, статистика)
+- ✅ Детальный просмотр медитации
+- ✅ Supabase backend (сохранение/загрузка данных)
+- ✅ Локальные уведомления
+- ✅ Монохромный дизайн (Light/Dark mode)
+
+**В режиме разработки:**
+- ⚠️ Используется `temp-user-id` (для тестирования без авторизации)
+- ⚠️ Загружаются все медитации (без фильтра по userId)
+- ⚠️ Временные RLS policies в Supabase
+
+**Следующие шаги:**
+1. Добавить Apple Sign In (опционально для v1.0)
+2. Настроить production Supabase
+3. Подготовить к релизу
 
 ---
 
@@ -217,17 +284,6 @@ MIT License - см. [LICENSE](LICENSE) для деталей.
 
 ---
 
-## 📊 Project Status
-
-🚧 **В разработке** - MVP фаза (70% завершено)
-
-**Готово:** Models, Timer, Form, History  
-**Осталось:** Services (Supabase), Auth Screen
-
-**Текущий этап**: Настройка завершена, начинаем разработку Models  
-**GitHub**: [github.com/neprokin/monotation](https://github.com/neprokin/monotation)  
-**Коммитов**: 4  
-**Последнее обновление**: 28 декабря 2025
-
-**Подробный статус**: [STATUS.md](STATUS.md) | **Как продолжить**: [NEXT_STEPS.md](NEXT_STEPS.md)
+**Последнее обновление**: 29 декабря 2025  
+**GitHub**: [github.com/neprokin/monotation](https://github.com/neprokin/monotation)
 

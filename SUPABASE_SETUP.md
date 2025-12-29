@@ -280,3 +280,10 @@ DROP CONSTRAINT IF EXISTS meditations_user_id_fkey;
 
 **Готово!** Теперь приложение может сохранять медитации в Supabase. 🎉
 
+---
+
+## 📚 См. также
+
+- [README.md](README.md) - Главная документация проекта
+- [WORKFLOW.md](WORKFLOW.md) - Development workflow
+
