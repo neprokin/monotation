@@ -97,6 +97,11 @@
   - [x] MeditationFormViewModel → SupabaseService для сохранения
   - [x] HistoryViewModel → SupabaseService для загрузки
   - [x] TimerViewModel → NotificationService для уведомлений
+- [x] Настройка Supabase:
+  - [x] Создание таблицы meditations
+  - [x] Настройка RLS policies (временные для разработки)
+  - [x] Исправление декодинга PostgreSQL INTERVAL
+  - [x] Тестирование сохранения и загрузки медитаций ✅
 
 ### ⏳ Следующие шаги:
 

@@ -22,6 +22,9 @@ actor SupabaseService {
         if let url = URL(string: configURL),
            !configURL.contains("YOUR_SUPABASE_URL_HERE"),
            !configKey.contains("YOUR_SUPABASE_ANON_KEY_HERE") {
+            // Initialize Supabase client
+            // Note: emitLocalSessionAsInitialSession warning is non-critical
+            // and will be fixed in future SDK versions
             self.client = SupabaseClient(
                 supabaseURL: url,
                 supabaseKey: configKey
@@ -59,13 +62,39 @@ actor SupabaseService {
         
         do {
             // Query meditations for user, ordered by start_time descending
-            let response: [MeditationDB] = try await client
-                .from("meditations")
-                .select()
-                .eq("user_id", value: userId)
-                .order("start_time", ascending: false)
-                .execute()
-                .value
+            // Convert userId string to UUID for query
+            // For "temp-user-id", use the same fixed UUID as in insert
+            let userUUID: UUID
+            if userId == "temp-user-id" {
+                userUUID = UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
+            } else {
+                userUUID = UUID(uuidString: userId) ?? UUID()
+            }
+            print("🔍 SupabaseService: Fetching meditations for userId: \(userId) (UUID: \(userUUID.uuidString))")
+            
+            // For development: load all meditations if temp-user-id (to see all test data)
+            let response: [MeditationDB]
+            if userId == "temp-user-id" {
+                // Load all meditations for development (no filter)
+                print("🔍 SupabaseService: Loading ALL meditations (development mode)")
+                response = try await client
+                    .from("meditations")
+                    .select()
+                    .order("start_time", ascending: false)
+                    .execute()
+                    .value
+            } else {
+                // Load only user's meditations
+                response = try await client
+                    .from("meditations")
+                    .select()
+                    .eq("user_id", value: userUUID.uuidString)
+                    .order("start_time", ascending: false)
+                    .execute()
+                    .value
+            }
+            
+            print("✅ SupabaseService: Fetched \(response.count) meditations")
             
             // Convert DB models to app models (need MainActor for MeditationPlace.from)
             return await MainActor.run {
@@ -89,12 +118,14 @@ actor SupabaseService {
             // Convert app model to DB model (nonisolated struct, safe to use)
             let dbMeditation = MeditationDB(from: meditation)
             
+            print("💾 SupabaseService: Saving meditation with userId: \(meditation.userId) -> UUID: \(dbMeditation.userId.uuidString)")
+            
             try await client
                 .from("meditations")
                 .insert(dbMeditation)
                 .execute()
             
-            print("✅ Meditation saved to Supabase: \(meditation.id)")
+            print("✅ Meditation saved to Supabase: \(meditation.id), user_id: \(dbMeditation.userId.uuidString)")
         } catch {
             print("❌ SupabaseService.insertMeditation error: \(error)")
             throw SupabaseError.insertFailed(error)
@@ -174,30 +205,126 @@ private nonisolated struct MeditationDB: Codable {
         case createdAt = "created_at"
     }
     
+    // Custom decoding for duration (PostgreSQL INTERVAL is returned as string)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        startTime = try container.decode(Date.self, forKey: .startTime)
+        endTime = try container.decode(Date.self, forKey: .endTime)
+        
+        // Decode duration: PostgreSQL INTERVAL is returned as string (e.g., "00:00:03")
+        if let durationString = try? container.decode(String.self, forKey: .duration) {
+            duration = Self.parsePostgreSQLInterval(durationString)
+        } else if let durationSeconds = try? container.decode(Double.self, forKey: .duration) {
+            // If it's already a number (seconds), use it directly
+            duration = durationSeconds
+        } else {
+            // Fallback: calculate from startTime and endTime
+            duration = endTime.timeIntervalSince(startTime)
+        }
+        
+        pose = try container.decode(String.self, forKey: .pose)
+        place = try container.decode(String.self, forKey: .place)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+    }
+    
+    // Custom encoding: convert TimeInterval to PostgreSQL INTERVAL string
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(userId, forKey: .userId)
+        try container.encode(startTime, forKey: .startTime)
+        try container.encode(endTime, forKey: .endTime)
+        
+        // Encode duration as PostgreSQL INTERVAL string (format: "HH:MM:SS")
+        try container.encode(MeditationDB.formatPostgreSQLInterval(duration), forKey: .duration)
+        
+        try container.encode(pose, forKey: .pose)
+        try container.encode(place, forKey: .place)
+        try container.encodeIfPresent(note, forKey: .note)
+        try container.encode(createdAt, forKey: .createdAt)
+    }
+    
+    // Helper: Parse PostgreSQL INTERVAL string to TimeInterval
+    private static func parsePostgreSQLInterval(_ intervalString: String) -> TimeInterval {
+        // PostgreSQL INTERVAL format examples:
+        // "00:00:03" (HH:MM:SS)
+        // "00:10:00" (HH:MM:SS)
+        // "1 day 00:10:00" (DD HH:MM:SS)
+        // "00:10:00.123456" (with microseconds)
+        
+        var totalSeconds: TimeInterval = 0
+        
+        // Check for days (format: "N day(s) HH:MM:SS")
+        let parts = intervalString.split(separator: " ", omittingEmptySubsequences: true)
+        var timePart = intervalString
+        
+        if parts.count >= 3, let days = Double(parts[0]) {
+            // Has days prefix
+            totalSeconds += days * 86400 // 24 * 60 * 60
+            // Extract time part (everything after "day" or "days")
+            if let dayIndex = intervalString.range(of: "day") {
+                timePart = String(intervalString[dayIndex.upperBound...]).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        
+        // Parse time part (HH:MM:SS or HH:MM:SS.microseconds)
+        let timeComponents = timePart.split(separator: ":")
+        if timeComponents.count >= 3 {
+            let hours = Double(timeComponents[0]) ?? 0
+            let minutes = Double(timeComponents[1]) ?? 0
+            // Remove microseconds if present
+            let secondsString = String(timeComponents[2]).split(separator: ".").first ?? Substring(timeComponents[2])
+            let seconds = Double(secondsString) ?? 0
+            totalSeconds += hours * 3600 + minutes * 60 + seconds
+        }
+        
+        return totalSeconds
+    }
+    
+    // Helper: Format TimeInterval to PostgreSQL INTERVAL string
+    private static func formatPostgreSQLInterval(_ interval: TimeInterval) -> String {
+        let totalSeconds = Int(interval)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+    
     init(from meditation: Meditation) {
-        // This init is called from actor context, so we can access MainActor properties
         self.id = meditation.id
-        // Convert String userId to UUID (assuming it's a valid UUID string)
-        self.userId = UUID(uuidString: meditation.userId) ?? UUID()
+        // Convert String userId to UUID
+        // For "temp-user-id", use a fixed UUID for consistency
+        let userUUID: UUID
+        if meditation.userId == "temp-user-id" {
+            // Fixed UUID for temp user (for development)
+            userUUID = UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
+        } else {
+            userUUID = UUID(uuidString: meditation.userId) ?? UUID()
+        }
+        self.userId = userUUID
         self.startTime = meditation.startTime
         self.endTime = meditation.endTime
-        // Access duration and storedValue in MainActor context
-        self.duration = MainActor.assumeIsolated { meditation.duration }
+        // Duration is computed from startTime and endTime (no MainActor needed)
+        self.duration = meditation.endTime.timeIntervalSince(meditation.startTime)
         self.pose = meditation.pose.rawValue
-        self.place = MainActor.assumeIsolated { meditation.place.storedValue }
+        // storedValue is a simple computed property (no MainActor needed)
+        self.place = meditation.place.storedValue
         self.note = meditation.note
         self.createdAt = meditation.createdAt
     }
     
     func toMeditation() -> Meditation {
-        // This is called from actor context, so we can use MainActor.assumeIsolated
+        // MeditationPlace.from is a static method, safe to call
         Meditation(
             id: id,
             userId: userId.uuidString,
             startTime: startTime,
             endTime: endTime,
             pose: MeditationPose(rawValue: pose) ?? .burmese,
-            place: MainActor.assumeIsolated { MeditationPlace.from(place) },
+            place: MeditationPlace.from(place),
             note: note,
             createdAt: createdAt
         )

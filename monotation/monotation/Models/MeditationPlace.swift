@@ -31,7 +31,7 @@ enum MeditationPlace: Codable, Equatable, Hashable {
     }
     
     /// String value for database storage
-    var storedValue: String {
+    nonisolated var storedValue: String {
         switch self {
         case .home: return "home"
         case .work: return "work"
@@ -40,7 +40,7 @@ enum MeditationPlace: Codable, Equatable, Hashable {
     }
     
     /// Create from database string value
-    static func from(_ string: String) -> MeditationPlace {
+    nonisolated static func from(_ string: String) -> MeditationPlace {
         switch string {
         case "home": return .home
         case "work": return .work
