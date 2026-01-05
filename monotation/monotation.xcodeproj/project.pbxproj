@@ -8,13 +8,44 @@
 
 /* Begin PBXBuildFile section */
 		A76C54652F02CFFA00DEE77E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A76C54642F02CFFA00DEE77E /* Supabase */; };
+		A76E7B7B2F0BE06300F779AA /* monotation Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A76E7B712F0BE06200F779AA /* monotation Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A76E7B792F0BE06300F779AA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A78C9C892F01AD7B0048B19F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A76E7B702F0BE06200F779AA;
+			remoteInfo = "monotation Watch App Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A76E7B7C2F0BE06300F779AA /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				A76E7B7B2F0BE06300F779AA /* monotation Watch App Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		A76E7B712F0BE06200F779AA /* monotation Watch App Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "monotation Watch App Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A78C9C912F01AD7B0048B19F /* monotation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = monotation.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A76E7B722F0BE06200F779AA /* monotation Watch App Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "monotation Watch App Watch App";
+			sourceTree = "<group>";
+		};
 		A78C9C932F01AD7B0048B19F /* monotation */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = monotation;
@@ -23,6 +54,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A76E7B6E2F0BE06200F779AA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A78C9C8E2F01AD7B0048B19F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -45,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				A78C9C932F01AD7B0048B19F /* monotation */,
+				A76E7B722F0BE06200F779AA /* monotation Watch App Watch App */,
 				A76C54632F02CFFA00DEE77E /* Frameworks */,
 				A78C9C922F01AD7B0048B19F /* Products */,
 			);
@@ -54,6 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				A78C9C912F01AD7B0048B19F /* monotation.app */,
+				A76E7B712F0BE06200F779AA /* monotation Watch App Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,6 +101,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A76E7B702F0BE06200F779AA /* monotation Watch App Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A76E7B7F2F0BE06300F779AA /* Build configuration list for PBXNativeTarget "monotation Watch App Watch App" */;
+			buildPhases = (
+				A76E7B6D2F0BE06200F779AA /* Sources */,
+				A76E7B6E2F0BE06200F779AA /* Frameworks */,
+				A76E7B6F2F0BE06200F779AA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A76E7B722F0BE06200F779AA /* monotation Watch App Watch App */,
+			);
+			name = "monotation Watch App Watch App";
+			packageProductDependencies = (
+			);
+			productName = "monotation Watch App Watch App";
+			productReference = A76E7B712F0BE06200F779AA /* monotation Watch App Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
 		A78C9C902F01AD7B0048B19F /* monotation */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A78C9C9C2F01AD7C0048B19F /* Build configuration list for PBXNativeTarget "monotation" */;
@@ -68,10 +130,12 @@
 				A78C9C8D2F01AD7B0048B19F /* Sources */,
 				A78C9C8E2F01AD7B0048B19F /* Frameworks */,
 				A78C9C8F2F01AD7B0048B19F /* Resources */,
+				A76E7B7C2F0BE06300F779AA /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A76E7B7A2F0BE06300F779AA /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A78C9C932F01AD7B0048B19F /* monotation */,
@@ -94,6 +158,9 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					A76E7B702F0BE06200F779AA = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					A78C9C902F01AD7B0048B19F = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -117,11 +184,19 @@
 			projectRoot = "";
 			targets = (
 				A78C9C902F01AD7B0048B19F /* monotation */,
+				A76E7B702F0BE06200F779AA /* monotation Watch App Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A76E7B6F2F0BE06200F779AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A78C9C8F2F01AD7B0048B19F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -132,6 +207,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A76E7B6D2F0BE06200F779AA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A78C9C8D2F01AD7B0048B19F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -141,7 +223,91 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A76E7B7A2F0BE06300F779AA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A76E7B702F0BE06200F779AA /* monotation Watch App Watch App */;
+			targetProxy = A76E7B792F0BE06300F779AA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		A76E7B7D2F0BE06300F779AA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "monotation Watch App Watch App/monotation Watch App Watch App.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LT85HQD6RH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "monotation-Watch-App-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "monotation Watch App";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Приложение использует данные о пульсе для анализа медитации";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Приложение сохраняет данные о медитациях в HealthKit";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.neprokin.monotation;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neprokin.monotation.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		A76E7B7E2F0BE06300F779AA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "monotation Watch App Watch App/monotation Watch App Watch App.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LT85HQD6RH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "monotation-Watch-App-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "monotation Watch App";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Приложение использует данные о пульсе для анализа медитации";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Приложение сохраняет данные о медитациях в HealthKit";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.neprokin.monotation;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neprokin.monotation.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
 		A78C9C9A2F01AD7C0048B19F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -336,6 +502,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A76E7B7F2F0BE06300F779AA /* Build configuration list for PBXNativeTarget "monotation Watch App Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A76E7B7D2F0BE06300F779AA /* Debug */,
+				A76E7B7E2F0BE06300F779AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A78C9C8C2F01AD7B0048B19F /* Build configuration list for PBXProject "monotation" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

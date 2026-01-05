@@ -1,0 +1,20 @@
+//
+//  monotation_Watch_AppApp.swift
+//  monotation Watch App
+//
+//  Main Watch App entry point
+//
+
+import SwiftUI
+
+@main
+struct monotation_Watch_App: App {
+    @StateObject private var workoutManager = WorkoutManager()
+    
+    var body: some Scene {
+        WindowGroup {
+            DurationSelectionView()
+                .environmentObject(workoutManager)
+        }
+    }
+}
