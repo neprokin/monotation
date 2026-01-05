@@ -10,11 +10,13 @@ import SwiftUI
 @main
 struct monotation_Watch_App: App {
     @StateObject private var workoutManager = WorkoutManager()
+    @StateObject private var connectivityManager = ConnectivityManager.shared
     
     var body: some Scene {
         WindowGroup {
             DurationSelectionView()
                 .environmentObject(workoutManager)
+                .environmentObject(connectivityManager)
         }
     }
 }

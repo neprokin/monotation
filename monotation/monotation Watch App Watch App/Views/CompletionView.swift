@@ -9,6 +9,8 @@ import SwiftUI
 
 struct CompletionView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var isSyncing: Bool = false
+    @State private var syncError: String?
     
     let duration: TimeInterval
     let averageHeartRate: Double
@@ -53,6 +55,33 @@ struct CompletionView: View {
                         label: "Время",
                         value: formatTime(startTime)
                     )
+                    
+                    // Sync status
+                    if isSyncing {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Синхронизация...")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else if let error = syncError {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text(error)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("Сохранено")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 .padding(.vertical)
                 
@@ -69,6 +98,33 @@ struct CompletionView: View {
                 .tint(.green)
             }
             .padding()
+        }
+        .onAppear {
+            syncToPhone()
+        }
+    }
+    
+    // MARK: - Sync
+    
+    private func syncToPhone() {
+        Task {
+            isSyncing = true
+            syncError = nil
+            
+            do {
+                try await ConnectivityManager.shared.sendMeditationToPhone(
+                    duration: duration,
+                    averageHeartRate: averageHeartRate,
+                    startTime: startTime
+                )
+                print("✅ Watch: Meditation synced to iPhone")
+            } catch {
+                print("❌ Watch: Sync failed: \(error)")
+                syncError = "Синхронизация отложена"
+                // Data is still saved in HealthKit, can retry later
+            }
+            
+            isSyncing = false
         }
     }
     

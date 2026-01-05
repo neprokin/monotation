@@ -24,11 +24,25 @@ class HistoryViewModel: ObservableObject {
     
     private let supabaseService = SupabaseService.shared
     private let authService = AuthService.shared
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
     
     init() {
         loadMeditations()
+        setupNotificationObserver()
+    }
+    
+    // MARK: - Notification Observer
+    
+    private func setupNotificationObserver() {
+        NotificationCenter.default
+            .publisher(for: .meditationAdded)
+            .sink { [weak self] _ in
+                print("📱 HistoryViewModel: Meditation added, refreshing...")
+                self?.loadMeditations()
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Load Meditations

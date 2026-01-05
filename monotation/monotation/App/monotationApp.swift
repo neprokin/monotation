@@ -9,10 +9,13 @@ import SwiftUI
 
 @main
 struct monotationApp: App {
+    @StateObject private var connectivityManager = ConnectivityManager.shared
+    
     var body: some Scene {
         WindowGroup {
             TimerView()
                 .tint(.primary) // Monochrome accent color
+                .environmentObject(connectivityManager)
         }
     }
 }
