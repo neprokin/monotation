@@ -7,12 +7,14 @@
 
 import Foundation
 import WatchConnectivity
+import Combine
 
 @MainActor
 class ConnectivityManager: NSObject, ObservableObject {
     static let shared = ConnectivityManager()
     
     @Published var isPhoneReachable: Bool = false
+    @Published var isActivated: Bool = false
     
     private override init() {
         super.init()
@@ -24,6 +26,25 @@ class ConnectivityManager: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - Wait for Activation
+    
+    private func waitForActivation() async throws {
+        // If already activated, return immediately
+        if isActivated && WCSession.default.activationState == .activated {
+            return
+        }
+        
+        // Wait up to 3 seconds for activation
+        for _ in 0..<30 {
+            if WCSession.default.activationState == .activated {
+                return
+            }
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+        }
+        
+        throw ConnectivityError.activationTimeout
+    }
+    
     // MARK: - Send to iPhone
     
     func sendMeditationToPhone(
@@ -31,6 +52,9 @@ class ConnectivityManager: NSObject, ObservableObject {
         averageHeartRate: Double,
         startTime: Date
     ) async throws {
+        // Wait for session activation
+        try await waitForActivation()
+        
         guard WCSession.default.isReachable else {
             print("⌚️ Watch: iPhone not reachable, will try later")
             // TODO: Store locally and retry later
@@ -75,11 +99,15 @@ extension ConnectivityManager: WCSessionDelegate {
         Task { @MainActor in
             if let error = error {
                 print("❌ Watch: WCSession activation failed: \(error)")
+                isActivated = false
                 return
             }
             
-            print("✅ Watch: WCSession activated")
+            isActivated = (activationState == .activated)
             isPhoneReachable = session.isReachable
+            
+            print("✅ Watch: WCSession activated (state: \(activationState.rawValue))")
+            print("⌚️ Watch: iPhone reachable: \(session.isReachable)")
         }
     }
     
@@ -96,6 +124,7 @@ extension ConnectivityManager: WCSessionDelegate {
 enum ConnectivityError: LocalizedError {
     case phoneNotReachable
     case saveFailed
+    case activationTimeout
     
     var errorDescription: String? {
         switch self {
@@ -103,6 +132,8 @@ enum ConnectivityError: LocalizedError {
             return "iPhone недоступен"
         case .saveFailed:
             return "Не удалось сохранить"
+        case .activationTimeout:
+            return "Таймаут активации"
         }
     }
 }

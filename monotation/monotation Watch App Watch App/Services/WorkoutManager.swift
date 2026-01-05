@@ -107,7 +107,7 @@ class WorkoutManager: NSObject, ObservableObject {
     
     // MARK: - Finish and Save Workout
     func finishWorkout() async {
-        guard let builder = builder, let session = session else { return }
+        guard let builder = builder, session != nil else { return }
         
         do {
             // End builder collection
@@ -119,7 +119,7 @@ class WorkoutManager: NSObject, ObservableObject {
             // Save mindful session
             try await saveMindfulSession()
             
-            print("✅ Workout saved: \(workout)")
+            print("✅ Workout saved: \(workout?.description ?? "unknown")")
             
             // Reset
             resetSession()

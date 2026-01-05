@@ -39,26 +39,26 @@ class ConnectivityManager: NSObject, ObservableObject {
         }
         
         let startTime = Date(timeIntervalSince1970: startTimeInterval)
+        let endTime = startTime.addingTimeInterval(duration)
         
         // Get user ID
         let userId = AuthService.shared.currentUserId ?? "temp-user-id"
         
         // Create meditation object
         let meditation = Meditation(
-            id: UUID().uuidString,
-            duration: Int(duration),
+            id: UUID(),
+            userId: userId,
             startTime: startTime,
+            endTime: endTime,
             pose: .burmese, // Default for Watch meditations
             place: .home,   // Default for Watch meditations
-            notes: "От Apple Watch ⌚️" // Marker for Watch sessions
+            note: "От Apple Watch ⌚️\nСредний пульс: \(Int(averageHeartRate)) уд/мин",
+            createdAt: Date()
         )
         
         // Save to Supabase
         do {
-            try await SupabaseService.shared.insertMeditation(
-                userId: userId,
-                meditation: meditation
-            )
+            try await SupabaseService.shared.insertMeditation(meditation)
             print("✅ iOS: Meditation from Watch saved to Supabase")
             print("   Duration: \(Int(duration))s, HR: \(Int(averageHeartRate)) bpm")
             
