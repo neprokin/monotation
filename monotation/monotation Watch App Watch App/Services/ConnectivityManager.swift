@@ -34,14 +34,18 @@ class ConnectivityManager: NSObject, ObservableObject {
             return
         }
         
-        // Wait up to 3 seconds for activation
-        for _ in 0..<30 {
+        print("⌚️ Watch: Waiting for WCSession activation...")
+        
+        // Wait up to 5 seconds for activation
+        for i in 0..<50 {
             if WCSession.default.activationState == .activated {
+                print("✅ Watch: WCSession activated after \(i * 100)ms")
                 return
             }
             try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
         }
         
+        print("❌ Watch: WCSession activation timeout after 5s")
         throw ConnectivityError.activationTimeout
     }
     

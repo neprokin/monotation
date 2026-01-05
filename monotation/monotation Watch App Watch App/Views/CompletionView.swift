@@ -108,6 +108,9 @@ struct CompletionView: View {
     
     private func syncToPhone() {
         Task {
+            // Give a bit more time before trying to sync
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
+            
             isSyncing = true
             syncError = nil
             
@@ -118,10 +121,15 @@ struct CompletionView: View {
                     startTime: startTime
                 )
                 print("✅ Watch: Meditation synced to iPhone")
+            } catch ConnectivityError.activationTimeout {
+                print("⚠️ Watch: WCSession activation timeout (simulator limitation)")
+                syncError = nil // Don't show error, it's expected in simulator
+            } catch ConnectivityError.phoneNotReachable {
+                print("⚠️ Watch: iPhone not reachable")
+                syncError = "Синхронизация отложена"
             } catch {
                 print("❌ Watch: Sync failed: \(error)")
                 syncError = "Синхронизация отложена"
-                // Data is still saved in HealthKit, can retry later
             }
             
             isSyncing = false

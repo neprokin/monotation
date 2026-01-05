@@ -66,7 +66,11 @@ class ConnectivityManager: NSObject, ObservableObject {
             NotificationCenter.default.post(name: .meditationAdded, object: nil)
             
         } catch {
-            print("❌ iOS: Failed to save Watch meditation: \(error)")
+            print("❌ iOS: Failed to save Watch meditation to Supabase: \(error)")
+            print("⚠️ iOS: Data is still saved in HealthKit on Watch")
+            
+            // TODO: Store in local queue for retry later
+            // For now, meditation is safe in HealthKit on Watch
         }
     }
 }
