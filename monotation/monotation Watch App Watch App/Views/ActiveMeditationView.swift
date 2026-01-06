@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WatchKit
+import Combine
 
 // MARK: - Extended Runtime Manager (для работы в фоне)
 class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessionDelegate {
