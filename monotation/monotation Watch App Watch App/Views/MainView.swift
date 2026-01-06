@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import WatchKit
+import Combine
 
 struct MainView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
+    @StateObject private var runtimeManager = ExtendedRuntimeManager()  // NEW: управляем фоновой сессией
     @State private var showSettings = false
     @State private var countdownPhase: Int = -1 // -1 = idle, 0-3 = countdown
     @State private var navigateToMeditation = false
@@ -77,6 +80,13 @@ struct MainView: View {
                 }
                 .fullScreenCover(isPresented: $navigateToMeditation) {
                     ActiveMeditationView()
+                        .environmentObject(runtimeManager)  // NEW: передаем менеджер фоновой сессии
+                }
+                .onChange(of: navigateToMeditation) { _, isPresented in
+                    // Остановить сессию когда возвращаемся на главный экран
+                    if !isPresented {
+                        runtimeManager.stop()
+                    }
                 }
             }
         }
@@ -107,6 +117,10 @@ struct MainView: View {
     // MARK: - Countdown Logic
     
     private func startCountdown() {
+        // Start extended runtime session BEFORE countdown
+        // This ensures background operation even if user locks screen during countdown
+        runtimeManager.start()
+        
         // Phase 0: 🧘 emoji
         withAnimation {
             countdownPhase = 0

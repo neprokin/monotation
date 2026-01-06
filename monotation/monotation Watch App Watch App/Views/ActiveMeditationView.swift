@@ -6,48 +6,11 @@
 //
 
 import SwiftUI
-import WatchKit
-import Combine
-
-// MARK: - Extended Runtime Manager (для работы в фоне)
-class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessionDelegate {
-    private var session: WKExtendedRuntimeSession?
-    
-    func start() {
-        session = WKExtendedRuntimeSession()
-        session?.delegate = self
-        session?.start()
-        print("✅ Extended runtime session started")
-    }
-    
-    func stop() {
-        session?.invalidate()
-        session = nil
-        print("⏹️ Extended runtime session stopped")
-    }
-    
-    // MARK: - WKExtendedRuntimeSessionDelegate
-    
-    func extendedRuntimeSessionDidStart(_ extendedRuntimeSession: WKExtendedRuntimeSession) {
-        print("✅ Extended runtime session started successfully")
-    }
-    
-    func extendedRuntimeSessionWillExpire(_ extendedRuntimeSession: WKExtendedRuntimeSession) {
-        print("⚠️ Extended runtime session will expire")
-    }
-    
-    func extendedRuntimeSession(_ extendedRuntimeSession: WKExtendedRuntimeSession, didInvalidateWith reason: WKExtendedRuntimeSessionInvalidationReason, error: Error?) {
-        print("❌ Extended runtime session invalidated: \(reason.rawValue)")
-        if let error = error {
-            print("Error: \(error.localizedDescription)")
-        }
-    }
-}
 
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
+    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager  // Используем общий менеджер
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var runtimeManager = ExtendedRuntimeManager()  // NEW: менеджер фонового режима
     
     @State private var timeRemaining: TimeInterval = 0
     @State private var timer: Timer?
@@ -159,8 +122,7 @@ struct ActiveMeditationView: View {
     private func startTimer() {
         startTime = Date()
         
-        // Start extended runtime session for background operation
-        runtimeManager.start()
+        // NOTE: Extended runtime session already started in MainView before countdown
         
         // Haptic feedback: подтверждение старта медитации
         WKInterfaceDevice.current().play(.start)

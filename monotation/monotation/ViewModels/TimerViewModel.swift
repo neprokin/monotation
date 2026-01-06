@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import UIKit
 
 @MainActor
 class TimerViewModel: ObservableObject {
@@ -22,6 +23,7 @@ class TimerViewModel: ObservableObject {
     
     private var timer: AnyCancellable?
     private var completionSignalTimer: AnyCancellable?  // NEW: для повторяющихся сигналов
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid  // NEW: для работы в фоне
     private var startTime: Date?
     private var endTime: Date?
     private var backgroundEnteredDate: Date?
@@ -37,6 +39,7 @@ class TimerViewModel: ObservableObject {
     deinit {
         timer?.cancel()
         completionSignalTimer?.cancel()  // NEW: очистка таймера сигналов
+        endBackgroundTask()  // NEW: очистка background task
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -56,6 +59,9 @@ class TimerViewModel: ObservableObject {
         
         // NEW: Тактильное + звуковое подтверждение старта
         hapticFeedback.playMeditationStart()
+        
+        // NEW: Start background task to keep running in background
+        beginBackgroundTask()
         
         // Schedule notification for timer completion
         scheduleTimerNotification()
@@ -96,6 +102,9 @@ class TimerViewModel: ObservableObject {
         timer = nil
         completionSignalTimer?.cancel()  // NEW: останавливаем сигналы
         completionSignalTimer = nil
+        
+        // NEW: End background task
+        endBackgroundTask()
         
         // Cancel notification
         cancelTimerNotification()
@@ -164,11 +173,31 @@ class TimerViewModel: ObservableObject {
         completionSignalTimer?.cancel()
         completionSignalTimer = nil
         
+        // NEW: End background task
+        endBackgroundTask()
+        
         // Переходим в финальное состояние
         timerState = .completed
         
         // Показываем форму
         showMeditationForm = true
+    }
+    
+    // MARK: - Background Task Management
+    
+    private func beginBackgroundTask() {
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask { [weak self] in
+            // Task is about to expire, clean up
+            self?.endBackgroundTask()
+        }
+        print("✅ Background task started: \(backgroundTaskID.rawValue)")
+    }
+    
+    private func endBackgroundTask() {
+        guard backgroundTaskID != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(backgroundTaskID)
+        backgroundTaskID = .invalid
+        print("⏹️ Background task ended")
     }
     
     // MARK: - Computed Properties
@@ -255,6 +284,10 @@ class TimerViewModel: ObservableObject {
         timer = nil
         completionSignalTimer?.cancel()  // NEW: останавливаем сигналы
         completionSignalTimer = nil
+        
+        // NEW: End background task if still active
+        endBackgroundTask()
+        
         timerState = .idle
         remainingTime = selectedDuration
         startTime = nil
