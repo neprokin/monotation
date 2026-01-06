@@ -20,34 +20,46 @@ struct MainView: View {
                 countdownView
                     .navigationBarHidden(true)
             } else {
-                // Main screen
-                VStack(spacing: 20) {
-                    Spacer()
-                    
-                    // Emoji icon
-                    Text("🧘")
-                        .font(.system(size: 60))
-                    
-                    // Title
-                    Text("Медитация")
-                        .font(.system(size: 20, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    
-                    Spacer()
-                    
-                    // Play button (monochrome)
-                    Button {
-                        startCountdown()
-                    } label: {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(.white)
-                            .frame(width: 80, height: 80)
-                            .background(Color.primary)
-                            .clipShape(Circle())
+                // Main screen (like Apple Workout)
+                VStack(spacing: 0) {
+                    // Content area
+                    VStack(spacing: 4) {
+                        Spacer()
+                        
+                        // Emoji icon (smaller)
+                        Text("🧘")
+                            .font(.system(size: 40))
+                        
+                        // Title (smaller)
+                        Text("Медитация")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundStyle(.primary)
+                        
+                        Spacer()
                     }
                     
-                    Spacer()
+                    // Bottom toolbar with Play button
+                    HStack {
+                        Spacer()
+                        
+                        Button {
+                            startCountdown()
+                        } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: 50, height: 50)
+                                
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(.black)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Spacer()
+                    }
+                    .padding(.bottom, 8)
                 }
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)

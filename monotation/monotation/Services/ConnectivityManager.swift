@@ -41,8 +41,8 @@ class ConnectivityManager: NSObject, ObservableObject {
         let startTime = Date(timeIntervalSince1970: startTimeInterval)
         let endTime = startTime.addingTimeInterval(duration)
         
-        // Get pose from message (default to lotus if not provided)
-        let poseString = message["pose"] as? String ?? "Лотос"
+        // Get pose from data (default to lotus if not provided)
+        let poseString = data["pose"] as? String ?? "Лотос"
         let pose = MeditationPose(rawValue: poseString) ?? .lotus
         
         // Get user ID
