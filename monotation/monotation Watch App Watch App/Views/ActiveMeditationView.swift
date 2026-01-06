@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WatchKit
 
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
@@ -18,6 +19,7 @@ struct ActiveMeditationView: View {
     @State private var isWaitingForAcknowledgment: Bool = false  // NEW: состояние ожидания подтверждения
     @State private var startTime: Date?
     @State private var showCompletion: Bool = false
+    @State private var extendedRuntimeSession: WKExtendedRuntimeSession?  // NEW: для работы в фоне
     
     private var duration: TimeInterval {
         workoutManager.selectedDuration
@@ -121,6 +123,9 @@ struct ActiveMeditationView: View {
     private func startTimer() {
         startTime = Date()
         
+        // Start extended runtime session for background operation
+        startExtendedRuntimeSession()
+        
         // Haptic feedback: подтверждение старта медитации
         WKInterfaceDevice.current().play(.start)
         
@@ -133,6 +138,22 @@ struct ActiveMeditationView: View {
                 timerCompleted()
             }
         }
+    }
+    
+    // MARK: - Extended Runtime Session (для работы в фоне)
+    
+    private func startExtendedRuntimeSession() {
+        // Create session for mindfulness/workout
+        extendedRuntimeSession = WKExtendedRuntimeSession()
+        extendedRuntimeSession?.delegate = self
+        extendedRuntimeSession?.start()
+        print("✅ Extended runtime session started")
+    }
+    
+    private func stopExtendedRuntimeSession() {
+        extendedRuntimeSession?.invalidate()
+        extendedRuntimeSession = nil
+        print("⏹️ Extended runtime session stopped")
     }
     
     private func pauseTimer() {
@@ -210,6 +231,7 @@ struct ActiveMeditationView: View {
         timer = nil
         completionSignalTimer?.invalidate()  // NEW: очистка таймера вибраций
         completionSignalTimer = nil
+        stopExtendedRuntimeSession()  // NEW: останавливаем фоновый режим
     }
     
     // MARK: - Helpers
@@ -218,6 +240,25 @@ struct ActiveMeditationView: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+}
+
+// MARK: - WKExtendedRuntimeSessionDelegate
+extension ActiveMeditationView: WKExtendedRuntimeSessionDelegate {
+    func extendedRuntimeSessionDidStart(_ extendedRuntimeSession: WKExtendedRuntimeSession) {
+        print("✅ Extended runtime session started successfully")
+    }
+    
+    func extendedRuntimeSessionWillExpire(_ extendedRuntimeSession: WKExtendedRuntimeSession) {
+        print("⚠️ Extended runtime session will expire")
+        // Session will expire - schedule notifications if needed
+    }
+    
+    func extendedRuntimeSession(_ extendedRuntimeSession: WKExtendedRuntimeSession, didInvalidateWith reason: WKExtendedRuntimeSessionInvalidationReason, error: Error?) {
+        print("❌ Extended runtime session invalidated: \(reason.rawValue)")
+        if let error = error {
+            print("Error: \(error.localizedDescription)")
+        }
     }
 }
 

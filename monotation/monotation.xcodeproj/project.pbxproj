@@ -40,6 +40,16 @@
 		A78C9C912F01AD7B0048B19F /* monotation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = monotation.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A74FD73C2F0D97FA005556EC /* Exceptions for "monotation" folder in "monotation" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A78C9C902F01AD7B0048B19F /* monotation */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A76E7B722F0BE06200F779AA /* monotation Watch App Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -48,6 +58,9 @@
 		};
 		A78C9C932F01AD7B0048B19F /* monotation */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A74FD73C2F0D97FA005556EC /* Exceptions for "monotation" folder in "monotation" target */,
+			);
 			path = monotation;
 			sourceTree = "<group>";
 		};
@@ -441,6 +454,7 @@
 				DEVELOPMENT_TEAM = LT85HQD6RH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = monotation/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -476,6 +490,7 @@
 				DEVELOPMENT_TEAM = LT85HQD6RH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = monotation/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
