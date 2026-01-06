@@ -60,7 +60,12 @@ class HapticFeedback: ObservableObject {
     private func prepareAudio() {
         do {
             // Configure audio session for meditation sounds
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            // .playback + .mixWithOthers allows sound to play in background and with other audio
+            try AVAudioSession.sharedInstance().setCategory(
+                .playback,
+                mode: .default,
+                options: [.mixWithOthers, .duckOthers]
+            )
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("❌ Audio session setup error: \(error)")
@@ -94,9 +99,9 @@ class HapticFeedback: ObservableObject {
     
     /// Настойчивое уведомление о завершении медитации
     func playMeditationCompletion() {
-        // Sound: системный колокольчик
+        // Sound: короткий системный звук (для повторения каждую секунду)
         if soundEnabled {
-            AudioServicesPlaySystemSound(1315) // Anticipate.caf - мягкий, приятный
+            AudioServicesPlaySystemSound(1013) // SMSReceived_Classic.caf - короткий, классический
         }
         
         guard hapticsEnabled else { return }

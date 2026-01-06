@@ -190,7 +190,8 @@ struct ActiveMeditationView: View {
     
     // NEW: Воспроизвести вибрацию завершения (БЕЗ звука на часах)
     private func playCompletionSignal() {
-        WKInterfaceDevice.current().play(.notification)  // Мощная вибрация
+        // .success - короткая четкая вибрация (не длинный паттерн как .notification)
+        WKInterfaceDevice.current().play(.success)
     }
     
     // NEW: Подтвердить завершение медитации
