@@ -11,8 +11,12 @@ struct MeditationFormView: View {
     @StateObject private var viewModel: MeditationFormViewModel
     @Environment(\.dismiss) private var dismiss
     
-    init(startTime: Date, endTime: Date) {
-        _viewModel = StateObject(wrappedValue: MeditationFormViewModel(startTime: startTime, endTime: endTime))
+    init(startTime: Date, endTime: Date, defaultPose: MeditationPose = .lotus) {
+        _viewModel = StateObject(wrappedValue: MeditationFormViewModel(
+            startTime: startTime,
+            endTime: endTime,
+            defaultPose: defaultPose
+        ))
     }
     
     var body: some View {

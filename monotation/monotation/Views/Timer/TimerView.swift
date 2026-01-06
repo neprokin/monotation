@@ -9,35 +9,66 @@ import SwiftUI
 
 struct TimerView: View {
     @StateObject private var viewModel = TimerViewModel()
+    @StateObject private var settings = AppSettings.shared
     @State private var showHistory = false
+    @State private var showSettings = false
+    @State private var countdownPhase: Int = -1 // -1 = idle, 0 = "На старт!", 1-3 = countdown
+    @State private var countdownProgress: Double = 0.0
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 40) {
-                Spacer()
-                
-                // Timer display
-                timerDisplay
-                
-                Spacer()
-                
-                // Controls
-                if case .idle = viewModel.timerState {
-                    durationSelector
-                    startButton
-                } else if case .completed = viewModel.timerState {
-                    // Show controls to start a new session
-                    durationSelector
-                    startButton
-                } else if viewModel.isRunning || viewModel.isPaused {
-                    controlButtons
+            GeometryReader { geometry in
+                ZStack {
+                    // Main timer (absolutely centered, never moves)
+                    timerDisplay
+                        .frame(width: 280, height: 280)
+                        .position(
+                            x: geometry.size.width / 2,
+                            y: geometry.size.height / 2
+                        )
+                    
+                    // Controls overlay (below timer, absolutely positioned)
+                    VStack {
+                        Spacer()
+                        
+                        ZStack {
+                            // Show Play button in idle state
+                            if countdownPhase < 0 && !viewModel.isRunning && !viewModel.isPaused {
+                                if case .idle = viewModel.timerState {
+                                    startButton
+                                } else if case .completed = viewModel.timerState {
+                                    startButton
+                                }
+                            }
+                            
+                            // Show control buttons when timer is running or paused
+                            if viewModel.isRunning || viewModel.isPaused {
+                                controlButtons
+                                    .transition(.opacity)
+                            }
+                        }
+                        .frame(height: 64)
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.isRunning)
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.isPaused)
+                        .padding(.bottom, 80)
+                    }
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+            }
+            .ignoresSafeArea(edges: .top)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(countdownPhase >= 0 || viewModel.isRunning || viewModel.isPaused ? .hidden : .visible, for: .navigationBar)
+            .toolbar {
+                // Settings button (left)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
                 }
                 
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("monotation")
-            .toolbar {
+                // History button (right)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showHistory = true
@@ -49,6 +80,9 @@ struct TimerView: View {
             .sheet(isPresented: $showHistory) {
                 HistoryView()
             }
+            .sheet(isPresented: $showSettings) {
+                SettingsView(settings: settings)
+            }
             .sheet(
                 isPresented: $viewModel.showMeditationForm,
                 onDismiss: {
@@ -59,8 +93,28 @@ struct TimerView: View {
                 if let session = viewModel.getMeditationSessionInfo() {
                     MeditationFormView(
                         startTime: session.startTime,
-                        endTime: session.endTime
+                        endTime: session.endTime,
+                        defaultPose: settings.defaultPose
                     )
+                }
+            }
+            .onAppear {
+                // Set default duration from settings when view appears
+                if case .idle = viewModel.timerState {
+                    viewModel.selectDuration(settings.defaultDuration)
+                }
+            }
+            .onChange(of: settings.defaultDuration) { _, newDuration in
+                // Update timer when default duration changes in settings
+                if case .idle = viewModel.timerState {
+                    viewModel.selectDuration(newDuration)
+                }
+            }
+            .onChange(of: viewModel.timerState) { _, newState in
+                // Reset countdown when returning to idle
+                if case .idle = newState {
+                    countdownPhase = -1
+                    countdownProgress = 0.0
                 }
             }
         }
@@ -69,74 +123,107 @@ struct TimerView: View {
     // MARK: - Timer Display
     
     private var timerDisplay: some View {
-        VStack(spacing: 16) {
-            // Circular progress
-            ZStack {
-                // Background circle
-                Circle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 20)
-                    .frame(width: 280, height: 280)
-                
-                // Progress circle (monochrome - dark gray)
-                Circle()
-                    .trim(from: 0, to: viewModel.progress)
-                    .stroke(
-                        Color.primary,
-                        style: StrokeStyle(lineWidth: 20, lineCap: .round)
-                    )
-                    .frame(width: 280, height: 280)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 0.1), value: viewModel.progress)
-                
-                // Time text
-                Text(viewModel.formattedTime)
-                    .font(.system(size: 60, weight: .light, design: .rounded))
-                    .monospacedDigit()
-            }
-        }
-    }
-    
-    // MARK: - Duration Selector
-    
-    private var durationSelector: some View {
-        VStack(spacing: 12) {
-            Text("Выберите длительность")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+        // Circular progress (280x280, absolutely positioned)
+        ZStack {
+            // Background circle
+            Circle()
+                .stroke(Color.gray.opacity(0.2), lineWidth: 20)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(DurationOption.allCases) { option in
-                        DurationButton(
-                            title: option.title,
-                            isSelected: viewModel.selectedDuration == option.duration,
-                            action: {
-                                viewModel.selectDuration(option.duration)
-                            }
-                        )
-                    }
+            // Progress circle (monochrome - primary color)
+            Circle()
+                .trim(from: 0, to: countdownPhase >= 0 ? countdownProgress : viewModel.progress)
+                .stroke(
+                    Color.primary,
+                    style: StrokeStyle(lineWidth: 20, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(countdownPhase >= 0 ? .easeInOut(duration: 0.3) : .linear(duration: 0.1), 
+                          value: countdownPhase >= 0 ? countdownProgress : viewModel.progress)
+            
+            // Text: countdown or timer (unified typography)
+            Group {
+                if countdownPhase == 0 {
+                    Text("На старт!")
+                        .font(.system(size: 60, weight: .light, design: .rounded))
+                        .foregroundStyle(.primary)
+                } else if countdownPhase > 0 {
+                    Text("\(4 - countdownPhase)")
+                        .font(.system(size: 60, weight: .light, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
+                } else {
+                    Text(viewModel.formattedTime)
+                        .font(.system(size: 60, weight: .light, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
                 }
-                .padding(.horizontal)
             }
+            .id("\(countdownPhase)-\(viewModel.formattedTime)")
+            .transition(.scale.combined(with: .opacity))
         }
     }
     
-    // MARK: - Control Buttons
+    // MARK: - Start Button (80% of timer width = 224pt)
     
     private var startButton: some View {
         Button {
-            viewModel.startTimer()
+            startCountdown()
         } label: {
-            Text("Начать")
-                .font(.title3)
-                .fontWeight(.semibold)
+            Image(systemName: "play.fill")
+                .font(.system(size: 32))
                 .foregroundStyle(Color(uiColor: .systemBackground))
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
+                .frame(width: 224, height: 64)
                 .background(Color.primary)
-                .cornerRadius(16)
+                .clipShape(Capsule())
         }
-        .padding(.horizontal)
+    }
+    
+    // MARK: - Countdown Logic
+    
+    private func startCountdown() {
+        // Phase 0: "На старт!" (0 seconds, no fill)
+        withAnimation {
+            countdownPhase = 0
+            countdownProgress = 0.0
+        }
+        
+        // Phase 1: "3" (1 second, 33% fill)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation {
+                countdownPhase = 1
+                countdownProgress = 0.33
+            }
+        }
+        
+        // Phase 2: "2" (2 seconds, 66% fill)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation {
+                countdownPhase = 2
+                countdownProgress = 0.66
+            }
+        }
+        
+        // Phase 3: "1" (3 seconds, 100% fill)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation {
+                countdownPhase = 3
+                countdownProgress = 1.0
+            }
+        }
+        
+        // Complete (4 seconds): start timer
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            countdownPhase = -1
+            countdownProgress = 0.0
+            
+            print("⏱️ Starting timer after countdown")
+            viewModel.startTimerAfterCountdown()
+            
+            // Force UI update
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                print("⏱️ Timer state: \(viewModel.timerState), isRunning: \(viewModel.isRunning)")
+            }
+        }
     }
     
     // MARK: - Control Buttons (Running/Paused state)
@@ -152,12 +239,11 @@ struct TimerView: View {
                 }
             } label: {
                 Image(systemName: viewModel.isRunning ? "pause.fill" : "play.fill")
-                    .font(.title2)
+                    .font(.system(size: 28))
                     .foregroundStyle(Color(uiColor: .systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
+                    .frame(width: 144, height: 64)
                     .background(Color.primary)
-                    .cornerRadius(16)
+                    .clipShape(Capsule())
             }
             
             // Stop button
@@ -165,33 +251,14 @@ struct TimerView: View {
                 viewModel.stopTimer()
             } label: {
                 Image(systemName: "stop.fill")
-                    .font(.title2)
+                    .font(.system(size: 28))
                     .foregroundStyle(.primary)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 64, height: 64)
                     .background(Color(uiColor: .secondarySystemBackground))
-                    .cornerRadius(16)
+                    .clipShape(Circle())
             }
         }
-        .padding(.horizontal)
-    }
-}
-
-// MARK: - Duration Button Component
-struct DurationButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.title3)
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? Color(uiColor: .systemBackground) : .primary)
-                .frame(width: 80, height: 80)
-                .background(isSelected ? Color.primary : Color(uiColor: .secondarySystemBackground))
-                .cornerRadius(16)
-        }
+        .frame(width: 224, height: 64) // Fixed width container (same as Play button)
     }
 }
 
@@ -214,6 +281,17 @@ enum DurationOption: CaseIterable, Identifiable {
         case .fifteen: return "15 мин"
         case .twenty: return "20 мин"
         case .thirty: return "30 мин"
+        }
+    }
+    
+    var pickerTitle: String {
+        switch self {
+        case .threeSeconds: return "3 секунды"
+        case .five: return "5 минут"
+        case .ten: return "10 минут"
+        case .fifteen: return "15 минут"
+        case .twenty: return "20 минут"
+        case .thirty: return "30 минут"
         }
     }
     

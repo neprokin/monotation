@@ -8,7 +8,13 @@
 import Foundation
 
 enum MeditationPose: String, Codable, CaseIterable, Identifiable {
-    case burmese = "Бирманская поза"
+    case lotus = "Лотос"
+    case halfLotus = "Полулотос"
+    case burmese = "Бирманская"
+    case seiza = "Сейдза"
+    case chair = "На стуле"
+    case lying = "Лежа"
+    case standing = "Стоя"
     case walking = "Ходьба"
     
     var id: String { rawValue }
@@ -16,8 +22,16 @@ enum MeditationPose: String, Codable, CaseIterable, Identifiable {
     /// SF Symbol icon name for UI
     var iconName: String {
         switch self {
-        case .burmese: return "figure.mind.and.body"
-        case .walking: return "figure.walk"
+        case .lotus, .halfLotus, .burmese, .seiza:
+            return "figure.mind.and.body"
+        case .chair:
+            return "chair.fill"
+        case .lying:
+            return "bed.double.fill"
+        case .standing:
+            return "figure.stand"
+        case .walking:
+            return "figure.walk"
         }
     }
     

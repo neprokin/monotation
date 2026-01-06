@@ -13,7 +13,7 @@ import Combine
 class MeditationFormViewModel: ObservableObject {
     // MARK: - Published Properties
     
-    @Published var selectedPose: MeditationPose = .burmese
+    @Published var selectedPose: MeditationPose
     @Published var selectedPlace: MeditationPlace = .home
     @Published var customPlace: String = ""
     @Published var note: String = ""
@@ -37,9 +37,10 @@ class MeditationFormViewModel: ObservableObject {
     
     // MARK: - Initialization
     
-    init(startTime: Date, endTime: Date) {
+    init(startTime: Date, endTime: Date, defaultPose: MeditationPose = .lotus) {
         self.startTime = startTime
         self.endTime = endTime
+        self.selectedPose = defaultPose
     }
     
     // MARK: - Validation

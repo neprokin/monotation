@@ -46,7 +46,7 @@ class TimerViewModel: ObservableObject {
         timerState = .idle
     }
     
-    func startTimer() {
+    func startTimerAfterCountdown() {
         startTime = Date()
         remainingTime = selectedDuration
         timerState = .running(remainingTime: selectedDuration)
