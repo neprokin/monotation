@@ -75,7 +75,7 @@ struct MainView: View {
                 .sheet(isPresented: $showSettings) {
                     WatchSettingsView()
                 }
-                .navigationDestination(isPresented: $navigateToMeditation) {
+                .fullScreenCover(isPresented: $navigateToMeditation) {
                     ActiveMeditationView()
                 }
             }

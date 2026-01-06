@@ -120,6 +120,10 @@ struct ActiveMeditationView: View {
     
     private func startTimer() {
         startTime = Date()
+        
+        // Haptic feedback: подтверждение старта медитации
+        WKInterfaceDevice.current().play(.start)
+        
         workoutManager.startWorkout()
         
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
