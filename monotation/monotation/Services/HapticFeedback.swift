@@ -8,6 +8,7 @@
 import CoreHaptics
 import SwiftUI
 import AVFoundation
+import Combine
 
 @MainActor
 class HapticFeedback: ObservableObject {
