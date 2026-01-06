@@ -21,10 +21,12 @@ class TimerViewModel: ObservableObject {
     // MARK: - Private Properties
     
     private var timer: AnyCancellable?
+    private var completionSignalTimer: AnyCancellable?  // NEW: для повторяющихся сигналов
     private var startTime: Date?
     private var endTime: Date?
     private var backgroundEnteredDate: Date?
     private let notificationService = NotificationService.shared
+    private let hapticFeedback = HapticFeedback.shared  // NEW: для тактильной обратной связи
     
     // MARK: - Initialization
     
@@ -34,6 +36,7 @@ class TimerViewModel: ObservableObject {
     
     deinit {
         timer?.cancel()
+        completionSignalTimer?.cancel()  // NEW: очистка таймера сигналов
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -50,6 +53,9 @@ class TimerViewModel: ObservableObject {
         startTime = Date()
         remainingTime = selectedDuration
         timerState = .running(remainingTime: selectedDuration)
+        
+        // NEW: Тактильное + звуковое подтверждение старта
+        hapticFeedback.playMeditationStart()
         
         // Schedule notification for timer completion
         scheduleTimerNotification()
@@ -88,6 +94,8 @@ class TimerViewModel: ObservableObject {
     func stopTimer() {
         timer?.cancel()
         timer = nil
+        completionSignalTimer?.cancel()  // NEW: останавливаем сигналы
+        completionSignalTimer = nil
         
         // Cancel notification
         cancelTimerNotification()
@@ -121,15 +129,45 @@ class TimerViewModel: ObservableObject {
         timer?.cancel()
         timer = nil
         endTime = Date()
-        timerState = .completed
+        
+        // NEW: Переходим в состояние ожидания подтверждения
+        timerState = .completedWaitingForAcknowledgment
         
         // Cancel scheduled notification (timer completed naturally)
         cancelTimerNotification()
         
-        // Trigger haptic feedback
-        triggerHaptic()
+        // NEW: Начинаем повторяющиеся сигналы каждую секунду
+        startCompletionSignals()
+    }
+    
+    /// NEW: Начать повторяющиеся сигналы о завершении медитации
+    private func startCompletionSignals() {
+        // Первый сигнал сразу
+        playCompletionSignal()
         
-        // Show meditation form
+        // Затем каждую секунду
+        completionSignalTimer = Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.playCompletionSignal()
+            }
+    }
+    
+    /// NEW: Воспроизвести сигнал завершения (звук + вибрация)
+    private func playCompletionSignal() {
+        hapticFeedback.playMeditationCompletion()
+    }
+    
+    /// NEW: Остановить сигналы и подтвердить завершение медитации
+    func acknowledgeMeditationCompletion() {
+        // Останавливаем повторяющиеся сигналы
+        completionSignalTimer?.cancel()
+        completionSignalTimer = nil
+        
+        // Переходим в финальное состояние
+        timerState = .completed
+        
+        // Показываем форму
         showMeditationForm = true
     }
     
@@ -215,6 +253,8 @@ class TimerViewModel: ObservableObject {
     func resetTimer() {
         timer?.cancel()
         timer = nil
+        completionSignalTimer?.cancel()  // NEW: останавливаем сигналы
+        completionSignalTimer = nil
         timerState = .idle
         remainingTime = selectedDuration
         startTime = nil
@@ -236,7 +276,8 @@ enum TimerState: Equatable {
     case selecting(duration: TimeInterval)
     case running(remainingTime: TimeInterval)
     case paused(remainingTime: TimeInterval)
-    case completed
+    case completedWaitingForAcknowledgment  // NEW: медитация завершена, ждем подтверждения
+    case completed  // Подтверждено, показываем форму
     
     var isRunning: Bool {
         if case .running = self { return true }
@@ -245,6 +286,11 @@ enum TimerState: Equatable {
     
     var isPaused: Bool {
         if case .paused = self { return true }
+        return false
+    }
+    
+    var isWaitingForAcknowledgment: Bool {
+        if case .completedWaitingForAcknowledgment = self { return true }
         return false
     }
 }

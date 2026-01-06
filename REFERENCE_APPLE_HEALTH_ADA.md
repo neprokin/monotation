@@ -38,18 +38,19 @@
 ### II. Технические возможности
 4. [HealthKit интеграция](#ii-1-healthkit-интеграция)
 5. [Датчики Apple Watch](#ii-2-датчики-apple-watch)
-6. [Системные фичи iOS/watchOS](#ii-3-системные-фичи-ioswatchos)
+6. [Core Haptics & Audio Haptic Design](#ii-3-core-haptics--audio-haptic-design)
+7. [Системные фичи iOS/watchOS](#ii-4-системные-фичи-ioswatchos)
 
 ### III. Функциональные направления
-7. [Свободные медитации](#iii-1-свободные-медитации)
-8. [Аналитика сеансов](#iii-2-аналитика-сеансов)
-9. [Биофидбек в реальном времени](#iii-3-биофидбек-в-реальном-времени)
-10. [AI-анализ данных](#iii-4-ai-анализ-данных)
+8. [Свободные медитации](#iii-1-свободные-медитации)
+9. [Аналитика сеансов](#iii-2-аналитика-сеансов)
+10. [Биофидбек в реальном времени](#iii-3-биофидбек-в-реальном-времени)
+11. [AI-анализ данных](#iii-4-ai-анализ-данных)
 
 ### IV. Apple Design Awards
-11. [Критерии и категории](#iv-1-критерии-и-категории)
-12. [Победители Health & Fitness](#iv-2-победители-health--fitness)
-13. [Ключевые требования](#iv-3-ключевые-требования)
+12. [Критерии и категории](#iv-1-критерии-и-категории)
+13. [Победители Health & Fitness](#iv-2-победители-health--fitness)
+14. [Ключевые требования](#iv-3-ключевые-требования)
 
 ---
 
@@ -255,7 +256,631 @@ let session = try HKWorkoutSession(
 
 ---
 
-### II-3. Системные фичи iOS/watchOS
+### II-3. Core Haptics & Audio Haptic Design
+
+> **📱 Источники:**
+> - [Core Haptics Documentation](https://developer.apple.com/documentation/CoreHaptics)
+> - [Playing Haptics - HIG](https://developer.apple.com/design/human-interface-guidelines/playing-haptics)
+> - [Delivering Rich App Experiences with Haptics](https://developer.apple.com/documentation/CoreHaptics/delivering-rich-app-experiences-with-haptics)
+
+**Apple's Philosophy:**
+> "Audio and haptics work together to create a rich sensory experience that reinforces the visual interface and provides tactile feedback for user actions."
+
+**Ключевая концепция для медитационных приложений:**
+Правильно спроектированные тактильные ощущения могут усилить присутствие и осознанность, не отвлекая от практики.
+
+---
+
+#### Что такое Core Haptics?
+
+**Core Haptics** — фреймворк для создания кастомных, сложных паттернов вибраций на iPhone (и некоторых iPad).
+
+**Поддержка устройств:**
+- ✅ iPhone 8 и новее (Taptic Engine)
+- ✅ iPad Pro (11-inch, 12.9-inch 3rd gen и новее)
+- ❌ Apple Watch (использует `WKHapticType` вместо Core Haptics)
+
+**Основные компоненты:**
+
+```swift
+// 1. Движок тактильных ощущений
+let hapticEngine = try CHHapticEngine()
+
+// 2. Паттерн (описание вибрации)
+let pattern = try CHHapticPattern(events: events, parameters: [])
+
+// 3. Плеер (воспроизведение паттерна)
+let player = try hapticEngine.makePlayer(with: pattern)
+player.start(atTime: 0)
+```
+
+---
+
+#### Типы тактильных событий
+
+**1. Transient Events (Короткие импульсы)**
+- Короткие, резкие тактильные ощущения
+- Длительность: ~5-50 мс
+- Применение: тики, щелчки, уведомления
+
+```swift
+CHHapticEvent(
+    eventType: .hapticTransient,
+    parameters: [
+        CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),  // 0.0 - 1.0
+        CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)   // 0.0 - 1.0
+    ],
+    relativeTime: 0
+)
+```
+
+**2. Continuous Events (Продолжительные)**
+- Длительные вибрации с изменяемой интенсивностью
+- Длительность: настраивается (от 100 мс до нескольких секунд)
+- Применение: процессы, состояния, фоновые ощущения
+
+```swift
+CHHapticEvent(
+    eventType: .hapticContinuous,
+    parameters: [
+        CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.7),
+        CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+    ],
+    relativeTime: 0,
+    duration: 2.0  // 2 секунды
+)
+```
+
+---
+
+#### Параметры тактильных ощущений
+
+**Intensity (Интенсивность)**
+- Диапазон: `0.0` - `1.0`
+- `0.0` = не ощущается
+- `0.3` = едва заметная
+- `0.5` = средняя (комфортная для медитации)
+- `0.7` = заметная
+- `1.0` = максимальная (для важных уведомлений)
+
+**Sharpness (Резкость)**
+- Диапазон: `0.0` - `1.0`
+- `0.0` = мягкая, глубокая, низкочастотная
+- `0.5` = сбалансированная
+- `1.0` = острая, резкая, высокочастотная
+
+**Для медитаций рекомендуется:**
+- Низкая sharpness (0.2-0.4) = мягкие, успокаивающие вибрации
+- Средняя intensity (0.4-0.6) = достаточно заметно, но не отвлекает
+
+---
+
+#### Audio Haptic Design: Синхронизация звука и вибрации
+
+**Философия Apple:**
+Аудио и тактильные ощущения должны работать **вместе**, создавая единое сенсорное впечатление.
+
+**Принципы синхронизации:**
+
+1. **Temporal Alignment (Временное совпадение)**
+   - Звук и вибрация начинаются одновременно
+   - Пики звука = пики вибрации
+   - Синхронизация с точностью до миллисекунд
+
+2. **Frequency Matching (Частотное соответствие)**
+   - Низкие звуки = низкая sharpness (мягкая вибрация)
+   - Высокие звуки = высокая sharpness (резкая вибрация)
+
+3. **Intensity Correspondence (Соответствие интенсивности)**
+   - Громкий звук = сильная вибрация
+   - Тихий звук = слабая вибрация
+
+**Пример: Колокольчик для завершения медитации**
+
+```swift
+// Звук колокольчика: высокий, звонкий, затухающий
+// Соответствующий haptic pattern:
+
+let events: [CHHapticEvent] = [
+    // Начальный удар (высокая интенсивность, высокая резкость)
+    CHHapticEvent(
+        eventType: .hapticTransient,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.9),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.8)
+        ],
+        relativeTime: 0
+    ),
+    
+    // Резонанс (продолжительная вибрация, затухающая)
+    CHHapticEvent(
+        eventType: .hapticContinuous,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+        ],
+        relativeTime: 0.05,
+        duration: 1.5
+    )
+]
+
+// Параметр затухания (fade out)
+let fadeParameter = CHHapticParameterCurve(
+    parameterID: .hapticIntensityControl,
+    controlPoints: [
+        CHHapticParameterCurve.ControlPoint(relativeTime: 0, value: 1.0),
+        CHHapticParameterCurve.ControlPoint(relativeTime: 1.5, value: 0.0)
+    ],
+    relativeTime: 0
+)
+
+let pattern = try CHHapticPattern(
+    events: events,
+    parameterCurves: [fadeParameter]
+)
+```
+
+---
+
+#### Best Practices для медитационных приложений
+
+**1. Подтверждение старта медитации**
+```swift
+// Мягкий, короткий импульс
+let startPattern = [
+    CHHapticEvent(
+        eventType: .hapticTransient,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.5),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)  // Мягкая
+        ],
+        relativeTime: 0
+    )
+]
+```
+
+**Характер:** Успокаивающий, подтверждающий
+**Длительность:** ~30 мс
+**Звук:** Короткий "тик" или тихий колокольчик
+
+---
+
+**2. Завершение медитации (критически важно!)**
+```swift
+// Серия из 3 импульсов с нарастающей интенсивностью
+let completionPattern = [
+    // Первый импульс (мягкий)
+    CHHapticEvent(
+        eventType: .hapticTransient,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.4)
+        ],
+        relativeTime: 0
+    ),
+    
+    // Второй импульс (средний)
+    CHHapticEvent(
+        eventType: .hapticTransient,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.7),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+        ],
+        relativeTime: 0.15
+    ),
+    
+    // Третий импульс (сильный)
+    CHHapticEvent(
+        eventType: .hapticTransient,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.9),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.6)
+        ],
+        relativeTime: 0.3
+    ),
+    
+    // Продолжительная вибрация (резонанс)
+    CHHapticEvent(
+        eventType: .hapticContinuous,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+        ],
+        relativeTime: 0.35,
+        duration: 1.0
+    )
+]
+```
+
+**Характер:** Настойчивый, но не агрессивный
+**Повторение:** Каждые 10 секунд до подтверждения
+**Звук:** Колокольчик или поющая чаша (синхронизирован с вибрацией)
+
+---
+
+**3. Интервальные сигналы во время медитации**
+```swift
+// Очень мягкий, почти незаметный импульс
+let intervalPattern = [
+    CHHapticEvent(
+        eventType: .hapticTransient,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.3),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.2)  // Очень мягкая
+        ],
+        relativeTime: 0
+    )
+]
+```
+
+**Характер:** Едва заметный, не отвлекающий
+**Применение:** Сигнал каждые N минут (опционально)
+**Звук:** Тихий колокольчик или без звука (только вибрация)
+
+---
+
+**4. Ритм дыхания (опционально)**
+```swift
+// Паттерн для Box Breathing (4-4-4-4)
+// Вдох: плавное нарастание, Задержка: пауза, Выдох: плавное затухание
+
+func createBreathingPattern(inhale: Double = 4.0, hold: Double = 4.0, exhale: Double = 4.0) -> CHHapticPattern {
+    var events: [CHHapticEvent] = []
+    var curves: [CHHapticParameterCurve] = []
+    
+    // Вдох (continuous event с нарастанием)
+    events.append(CHHapticEvent(
+        eventType: .hapticContinuous,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.3),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.2)
+        ],
+        relativeTime: 0,
+        duration: inhale
+    ))
+    
+    curves.append(CHHapticParameterCurve(
+        parameterID: .hapticIntensityControl,
+        controlPoints: [
+            CHHapticParameterCurve.ControlPoint(relativeTime: 0, value: 0.1),
+            CHHapticParameterCurve.ControlPoint(relativeTime: inhale, value: 0.5)
+        ],
+        relativeTime: 0
+    ))
+    
+    // Задержка (пауза)
+    // Нет событий
+    
+    // Выдох (continuous event с затуханием)
+    events.append(CHHapticEvent(
+        eventType: .hapticContinuous,
+        parameters: [
+            CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.3),
+            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.2)
+        ],
+        relativeTime: inhale + hold,
+        duration: exhale
+    ))
+    
+    curves.append(CHHapticParameterCurve(
+        parameterID: .hapticIntensityControl,
+        controlPoints: [
+            CHHapticParameterCurve.ControlPoint(relativeTime: 0, value: 0.5),
+            CHHapticParameterCurve.ControlPoint(relativeTime: exhale, value: 0.0)
+        ],
+        relativeTime: inhale + hold
+    ))
+    
+    return try! CHHapticPattern(events: events, parameterCurves: curves)
+}
+```
+
+**Характер:** Едва ощутимые волны, синхронизированные с дыханием
+**Применение:** Для дыхательных практик
+**Звук:** Опционально: мягкие звуки природы или тишина
+
+---
+
+#### watchOS: WKHapticType (упрощенный API)
+
+**На Apple Watch НЕТ Core Haptics**, вместо этого используется `WKHapticType`:
+
+```swift
+// watchOS Haptics API
+WKInterfaceDevice.current().play(.notification)  // Стандартное уведомление
+WKInterfaceDevice.current().play(.directionUp)   // Направленные вибрации
+WKInterfaceDevice.current().play(.directionDown)
+WKInterfaceDevice.current().play(.success)       // Успех
+WKInterfaceDevice.current().play(.failure)       // Ошибка
+WKInterfaceDevice.current().play(.retry)         // Повтор
+WKInterfaceDevice.current().play(.start)         // Начало
+WKInterfaceDevice.current().play(.stop)          // Остановка
+WKInterfaceDevice.current().play(.click)         // Клик
+```
+
+**Для медитационного приложения на Apple Watch:**
+
+| Сценарий | WKHapticType | Частота повторения |
+|----------|--------------|-------------------|
+| Старт медитации | `.start` | 1 раз |
+| Завершение медитации | `.notification` | Каждые 10 сек до подтверждения |
+| Интервальный сигнал | `.click` | По расписанию (опционально) |
+| Подтверждение остановки | `.success` | 1 раз |
+
+**Важно:** watchOS вибрации всегда мощнее iOS (часы на запястье), поэтому даже `.click` хорошо ощутим.
+
+---
+
+#### Технические детали реализации
+
+**Инициализация и управление ресурсами:**
+
+```swift
+import CoreHaptics
+
+class HapticManager {
+    private var engine: CHHapticEngine?
+    
+    init() {
+        // Проверка поддержки
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            print("⚠️ Device doesn't support haptics")
+            return
+        }
+        
+        do {
+            engine = try CHHapticEngine()
+            try engine?.start()
+            
+            // Автоматический перезапуск при сбое
+            engine?.resetHandler = { [weak self] in
+                print("🔄 Haptic engine reset")
+                try? self?.engine?.start()
+            }
+            
+            // Обработка остановки (например, звонок)
+            engine?.stoppedHandler = { reason in
+                print("⏸️ Haptic engine stopped: \(reason)")
+            }
+            
+        } catch {
+            print("❌ Haptic engine creation error: \(error)")
+        }
+    }
+    
+    func playPattern(_ events: [CHHapticEvent]) {
+        guard let engine = engine else { return }
+        
+        do {
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: CHHapticTimeImmediate)
+        } catch {
+            print("❌ Haptic playback error: \(error)")
+        }
+    }
+}
+```
+
+**Энергоэффективность:**
+- Запускайте движок только когда нужно
+- Останавливайте после использования: `engine.stop()`
+- Haptics потребляет ~5-10% батареи при интенсивном использовании
+
+**Accessibility:**
+- Проверяйте `UIAccessibility.isReduceMotionEnabled`
+- Некоторые пользователи отключают вибрации
+- Всегда предоставляйте альтернативу (звук + визуал)
+
+---
+
+#### Human Interface Guidelines: Ключевые рекомендации
+
+**DO ✅**
+- Используйте haptics для усиления визуального и аудио опыта
+- Синхронизируйте звук и вибрацию
+- Делайте паттерны короткими и четкими
+- Тестируйте на реальных устройствах (симулятор не поддерживает haptics)
+- Предоставляйте настройки для отключения
+
+**DON'T ❌**
+- Не используйте haptics как единственный способ коммуникации
+- Не делайте вибрации слишком частыми или длительными
+- Не игнорируйте системные настройки accessibility
+- Не используйте максимальную интенсивность без необходимости
+- Не забывайте про энергопотребление
+
+**Для медитационных приложений особенно важно:**
+- **Мягкие, низкочастотные вибрации** (low sharpness)
+- **Предсказуемые паттерны** (не должны пугать)
+- **Опциональность** (некоторые предпочитают без вибраций)
+- **Тестирование на медитирующих** (что отвлекает, а что помогает)
+
+---
+
+#### Пример полной реализации для медитационного приложения
+
+```swift
+// HapticFeedback.swift
+
+import CoreHaptics
+import SwiftUI
+
+@MainActor
+class HapticFeedback: ObservableObject {
+    private var engine: CHHapticEngine?
+    @Published var isSupported: Bool = false
+    
+    // Settings
+    @AppStorage("hapticsEnabled") private var hapticsEnabled = true
+    @AppStorage("hapticIntensity") private var intensityMultiplier = 1.0  // 0.5 - 1.0
+    
+    init() {
+        prepareHaptics()
+    }
+    
+    private func prepareHaptics() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            return
+        }
+        
+        do {
+            engine = try CHHapticEngine()
+            try engine?.start()
+            isSupported = true
+            
+            engine?.resetHandler = { [weak self] in
+                try? self?.engine?.start()
+            }
+        } catch {
+            print("❌ Haptic engine error: \(error)")
+        }
+    }
+    
+    // MARK: - Meditation Haptics
+    
+    /// Мягкое подтверждение старта медитации
+    func playMeditationStart() {
+        guard hapticsEnabled else { return }
+        
+        let intensity = 0.5 * intensityMultiplier
+        let event = CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(intensity)),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+            ],
+            relativeTime: 0
+        )
+        
+        playPattern([event])
+    }
+    
+    /// Настойчивое уведомление о завершении медитации
+    func playMeditationCompletion() {
+        guard hapticsEnabled else { return }
+        
+        let baseIntensity = intensityMultiplier
+        let events: [CHHapticEvent] = [
+            // Серия из 3 нарастающих импульсов
+            CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.6 * baseIntensity)),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.4)
+                ],
+                relativeTime: 0
+            ),
+            CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.75 * baseIntensity)),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+                ],
+                relativeTime: 0.15
+            ),
+            CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.9 * baseIntensity)),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.6)
+                ],
+                relativeTime: 0.3
+            ),
+            // Продолжительный резонанс
+            CHHapticEvent(
+                eventType: .hapticContinuous,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.6 * baseIntensity)),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+                ],
+                relativeTime: 0.35,
+                duration: 1.0
+            )
+        ]
+        
+        playPattern(events)
+    }
+    
+    /// Мягкий интервальный сигнал (опционально)
+    func playIntervalSignal() {
+        guard hapticsEnabled else { return }
+        
+        let intensity = 0.3 * intensityMultiplier
+        let event = CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(intensity)),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.2)
+            ],
+            relativeTime: 0
+        )
+        
+        playPattern([event])
+    }
+    
+    // MARK: - Playback
+    
+    private func playPattern(_ events: [CHHapticEvent]) {
+        guard let engine = engine else { return }
+        
+        do {
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: CHHapticTimeImmediate)
+        } catch {
+            print("❌ Haptic playback error: \(error)")
+        }
+    }
+}
+```
+
+**Использование в SwiftUI:**
+
+```swift
+struct TimerView: View {
+    @StateObject private var haptics = HapticFeedback()
+    
+    var body: some View {
+        // ...
+        Button("Start") {
+            haptics.playMeditationStart()
+            // Start meditation
+        }
+    }
+}
+```
+
+---
+
+#### Резюме: Haptics для медитационного приложения
+
+**✅ Обязательно реализовать:**
+1. **Подтверждение старта** — мягкая вибрация при начале медитации
+2. **Сигнал завершения** — серия настойчивых вибраций, повторяющихся до подтверждения
+
+**🎯 Опционально (для улучшения опыта):**
+3. **Интервальные сигналы** — мягкие вибрации каждые N минут
+4. **Ритм дыхания** — тактильная поддержка дыхательных практик
+
+**📱 Платформы:**
+- **iPhone:** Core Haptics (кастомные паттерны, полный контроль)
+- **Apple Watch:** WKHapticType (простые предустановленные вибрации)
+
+**🎨 Принципы дизайна:**
+- Мягкие, низкочастотные вибрации (low sharpness 0.2-0.4)
+- Средняя интенсивность (0.4-0.6) для комфорта
+- Синхронизация аудио и вибрации
+- Возможность настройки и отключения
+
+**🔋 Энергоэффективность:**
+- Короткие паттерны (<2 секунд)
+- Запуск движка только при необходимости
+- Автоматическая остановка после использования
+
+---
+
+### II-4. Системные фичи iOS/watchOS
 
 #### Siri Shortcuts & App Intents
 **Возможности:**
@@ -979,5 +1604,5 @@ Output:
 
 ---
 
-**Последнее обновление:** Январь 2025  
+**Последнее обновление:** Январь 2025 (добавлен раздел Core Haptics & Audio Haptic Design)  
 **Статус:** Living document (обновляется по мере появления новых возможностей платформы)

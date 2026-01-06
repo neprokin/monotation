@@ -13,7 +13,9 @@ struct ActiveMeditationView: View {
     
     @State private var timeRemaining: TimeInterval = 0
     @State private var timer: Timer?
+    @State private var completionSignalTimer: Timer?  // NEW: для повторяющихся вибраций
     @State private var isPaused: Bool = false
+    @State private var isWaitingForAcknowledgment: Bool = false  // NEW: состояние ожидания подтверждения
     @State private var startTime: Date?
     @State private var showCompletion: Bool = false
     
@@ -49,34 +51,46 @@ struct ActiveMeditationView: View {
             Spacer()
             
             // Control buttons
-            HStack(spacing: 16) {
-                // Pause/Resume button
+            if isWaitingForAcknowledgment {
+                // NEW: Кнопка "Завершить" при ожидании подтверждения
                 Button {
-                    if isPaused {
-                        resumeTimer()
-                    } else {
-                        pauseTimer()
+                    acknowledgeMeditationCompletion()
+                } label: {
+                    Text("Завершить")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                // Обычные кнопки управления
+                HStack(spacing: 16) {
+                    // Pause/Resume button
+                    Button {
+                        if isPaused {
+                            resumeTimer()
+                        } else {
+                            pauseTimer()
+                        }
+                    } label: {
+                        Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                            .font(.title2)
                     }
-                } label: {
-                    Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                        .font(.title2)
+                    .buttonStyle(.plain)
+                    .frame(width: 60, height: 60)
+                    .background(Color.primary.opacity(0.2))  // Монохромная тема
+                    .cornerRadius(30)
+                    
+                    // Stop button
+                    Button {
+                        stopTimer()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 50, height: 50)
+                    .background(Color.primary.opacity(0.1))  // Монохромная тема
+                    .cornerRadius(25)
                 }
-                .buttonStyle(.plain)
-                .frame(width: 60, height: 60)
-                .background(Color.green)
-                .cornerRadius(30)
-                
-                // Stop button
-                Button {
-                    stopTimer()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.title3)
-                }
-                .buttonStyle(.plain)
-                .frame(width: 50, height: 50)
-                .background(Color.red)
-                .cornerRadius(25)
             }
         }
         .padding()
@@ -135,6 +149,9 @@ struct ActiveMeditationView: View {
     
     private func stopTimer() {
         timer?.invalidate()
+        completionSignalTimer?.invalidate()  // NEW: останавливаем вибрации
+        completionSignalTimer = nil
+        isWaitingForAcknowledgment = false  // NEW: сбрасываем состояние
         workoutManager.endWorkout()
         
         // Show completion if at least 3 seconds passed
@@ -149,15 +166,45 @@ struct ActiveMeditationView: View {
         timer?.invalidate()
         workoutManager.endWorkout()
         
-        // Haptic feedback
-        WKInterfaceDevice.current().play(.success)
+        // NEW: Переходим в состояние ожидания подтверждения
+        isWaitingForAcknowledgment = true
         
+        // NEW: Начинаем повторяющиеся вибрации каждую секунду
+        startCompletionSignals()
+    }
+    
+    // NEW: Начать повторяющиеся вибрации о завершении
+    private func startCompletionSignals() {
+        // Первая вибрация сразу
+        playCompletionSignal()
+        
+        // Затем каждую секунду
+        completionSignalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            playCompletionSignal()
+        }
+    }
+    
+    // NEW: Воспроизвести вибрацию завершения (БЕЗ звука на часах)
+    private func playCompletionSignal() {
+        WKInterfaceDevice.current().play(.notification)  // Мощная вибрация
+    }
+    
+    // NEW: Подтвердить завершение медитации
+    private func acknowledgeMeditationCompletion() {
+        // Останавливаем вибрации
+        completionSignalTimer?.invalidate()
+        completionSignalTimer = nil
+        
+        // Показываем форму завершения
+        isWaitingForAcknowledgment = false
         showCompletion = true
     }
     
     private func cleanup() {
         timer?.invalidate()
         timer = nil
+        completionSignalTimer?.invalidate()  // NEW: очистка таймера вибраций
+        completionSignalTimer = nil
     }
     
     // MARK: - Helpers

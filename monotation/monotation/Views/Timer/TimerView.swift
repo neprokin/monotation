@@ -33,7 +33,7 @@ struct TimerView: View {
                         
                         ZStack {
                             // Show Play button in idle state
-                            if countdownPhase < 0 && !viewModel.isRunning && !viewModel.isPaused {
+                            if countdownPhase < 0 && !viewModel.isRunning && !viewModel.isPaused && !viewModel.timerState.isWaitingForAcknowledgment {
                                 if case .idle = viewModel.timerState {
                                     startButton
                                 } else if case .completed = viewModel.timerState {
@@ -46,10 +46,17 @@ struct TimerView: View {
                                 controlButtons
                                     .transition(.opacity)
                             }
+                            
+                            // NEW: Show "Завершить" button when waiting for acknowledgment
+                            if viewModel.timerState.isWaitingForAcknowledgment {
+                                acknowledgmentButton
+                                    .transition(.scale.combined(with: .opacity))
+                            }
                         }
                         .frame(height: 64)
                         .animation(.easeInOut(duration: 0.2), value: viewModel.isRunning)
                         .animation(.easeInOut(duration: 0.2), value: viewModel.isPaused)
+                        .animation(.easeInOut(duration: 0.3), value: viewModel.timerState.isWaitingForAcknowledgment)
                         .padding(.bottom, 80)
                     }
                 }
@@ -57,7 +64,7 @@ struct TimerView: View {
             }
             .ignoresSafeArea(edges: .top)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(countdownPhase >= 0 || viewModel.isRunning || viewModel.isPaused ? .hidden : .visible, for: .navigationBar)
+            .toolbar(countdownPhase >= 0 || viewModel.isRunning || viewModel.isPaused || viewModel.timerState.isWaitingForAcknowledgment ? .hidden : .visible, for: .navigationBar)
             .toolbar {
                 // Settings button (left)
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -131,7 +138,16 @@ struct TimerView: View {
             
             // Progress circle (monochrome - primary color)
             Circle()
-                .trim(from: 0, to: countdownPhase >= 0 ? countdownProgress : viewModel.progress)
+                .trim(from: 0, to: {
+                    // NEW: В состоянии завершения - 100%
+                    if viewModel.timerState.isWaitingForAcknowledgment {
+                        return 1.0
+                    } else if countdownPhase >= 0 {
+                        return countdownProgress
+                    } else {
+                        return viewModel.progress
+                    }
+                }())
                 .stroke(
                     Color.primary,
                     style: StrokeStyle(lineWidth: 20, lineCap: .round)
@@ -140,9 +156,14 @@ struct TimerView: View {
                 .animation(countdownPhase >= 0 ? .easeInOut(duration: 0.3) : .linear(duration: 0.1), 
                           value: countdownPhase >= 0 ? countdownProgress : viewModel.progress)
             
-            // Text: countdown or timer (unified typography)
+            // Text: countdown, timer, or completion checkmark (unified typography)
             Group {
-                if countdownPhase == 0 {
+                if viewModel.timerState.isWaitingForAcknowledgment {
+                    // NEW: Показываем галочку при завершении
+                    Text("✓")
+                        .font(.system(size: 80, weight: .light, design: .rounded))
+                        .foregroundStyle(.primary)
+                } else if countdownPhase == 0 {
                     Text("🧘")
                         .font(.system(size: 60, weight: .light, design: .rounded))
                 } else if countdownPhase > 0 {
@@ -157,7 +178,7 @@ struct TimerView: View {
                         .foregroundStyle(.primary)
                 }
             }
-            .id("\(countdownPhase)-\(viewModel.formattedTime)")
+            .id("\(countdownPhase)-\(viewModel.formattedTime)-\(viewModel.timerState.isWaitingForAcknowledgment)")
             .transition(.scale.combined(with: .opacity))
         }
     }
@@ -258,6 +279,21 @@ struct TimerView: View {
             }
         }
         .frame(width: 224, height: 64) // Fixed width container (same as Play button)
+    }
+    
+    // MARK: - Acknowledgment Button (Completion state)
+    
+    private var acknowledgmentButton: some View {
+        Button {
+            viewModel.acknowledgeMeditationCompletion()
+        } label: {
+            Image(systemName: "stop.fill")
+                .font(.system(size: 32))
+                .foregroundStyle(Color(uiColor: .systemBackground))
+                .frame(width: 224, height: 64)
+                .background(Color.primary)
+                .clipShape(Capsule())
+        }
     }
 }
 
