@@ -17,9 +17,18 @@ class WorkoutManager: NSObject, ObservableObject {
     @Published var averageHeartRate: Double = 0
     @Published var isSessionActive: Bool = false
     
-    // Settings
-    @Published var selectedDuration: TimeInterval = 900 // 15 minutes default
-    @Published var selectedPose: MeditationPose = .lotus
+    // Settings (with UserDefaults persistence)
+    @Published var selectedDuration: TimeInterval {
+        didSet {
+            UserDefaults.standard.set(selectedDuration, forKey: "selectedDuration")
+        }
+    }
+    
+    @Published var selectedPose: MeditationPose {
+        didSet {
+            UserDefaults.standard.set(selectedPose.rawValue, forKey: "selectedPose")
+        }
+    }
     
     // MARK: - Private Properties
     private let healthStore = HKHealthStore()
@@ -32,6 +41,17 @@ class WorkoutManager: NSObject, ObservableObject {
     
     // MARK: - Initialization
     override init() {
+        // Load settings from UserDefaults
+        let savedDuration = UserDefaults.standard.double(forKey: "selectedDuration")
+        self.selectedDuration = savedDuration > 0 ? savedDuration : 900 // Default: 15 minutes
+        
+        if let savedPoseString = UserDefaults.standard.string(forKey: "selectedPose"),
+           let savedPose = MeditationPose(rawValue: savedPoseString) {
+            self.selectedPose = savedPose
+        } else {
+            self.selectedPose = .lotus // Default
+        }
+        
         super.init()
     }
     
