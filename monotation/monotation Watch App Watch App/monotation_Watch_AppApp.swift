@@ -14,7 +14,7 @@ struct monotation_Watch_App: App {
     
     var body: some Scene {
         WindowGroup {
-            DurationSelectionView()
+            MainView()
                 .environmentObject(workoutManager)
                 .environmentObject(connectivityManager)
         }

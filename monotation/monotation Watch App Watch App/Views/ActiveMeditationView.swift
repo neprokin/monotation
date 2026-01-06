@@ -11,17 +11,14 @@ struct ActiveMeditationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
     @Environment(\.dismiss) private var dismiss
     
-    let duration: TimeInterval
-    
-    @State private var timeRemaining: TimeInterval
+    @State private var timeRemaining: TimeInterval = 0
     @State private var timer: Timer?
     @State private var isPaused: Bool = false
     @State private var startTime: Date?
     @State private var showCompletion: Bool = false
     
-    init(duration: TimeInterval) {
-        self.duration = duration
-        _timeRemaining = State(initialValue: duration)
+    private var duration: TimeInterval {
+        workoutManager.selectedDuration
     }
     
     var body: some View {
@@ -85,6 +82,8 @@ struct ActiveMeditationView: View {
         .padding()
         .navigationBarBackButtonHidden(true)
         .onAppear {
+            // Initialize time remaining from settings
+            timeRemaining = duration
             startTimer()
         }
         .onDisappear {
@@ -95,6 +94,7 @@ struct ActiveMeditationView: View {
                 duration: duration - timeRemaining,
                 averageHeartRate: workoutManager.averageHeartRate,
                 startTime: startTime ?? Date(),
+                pose: workoutManager.selectedPose,
                 onDismiss: {
                     dismiss()
                 }
@@ -172,7 +172,7 @@ struct ActiveMeditationView: View {
 // MARK: - Preview
 #Preview {
     NavigationStack {
-        ActiveMeditationView(duration: 300)
+        ActiveMeditationView()
             .environmentObject(WorkoutManager())
     }
 }

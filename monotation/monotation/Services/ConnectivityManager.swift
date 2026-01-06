@@ -41,6 +41,10 @@ class ConnectivityManager: NSObject, ObservableObject {
         let startTime = Date(timeIntervalSince1970: startTimeInterval)
         let endTime = startTime.addingTimeInterval(duration)
         
+        // Get pose from message (default to lotus if not provided)
+        let poseString = message["pose"] as? String ?? "Лотос"
+        let pose = MeditationPose(rawValue: poseString) ?? .lotus
+        
         // Get user ID
         let userId = AuthService.shared.currentUserId ?? "temp-user-id"
         
@@ -50,7 +54,7 @@ class ConnectivityManager: NSObject, ObservableObject {
             userId: userId,
             startTime: startTime,
             endTime: endTime,
-            pose: .burmese, // Default for Watch meditations
+            pose: pose,
             place: .home,   // Default for Watch meditations
             note: "От Apple Watch ⌚️\nСредний пульс: \(Int(averageHeartRate)) уд/мин",
             createdAt: Date()

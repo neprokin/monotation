@@ -15,6 +15,7 @@ struct CompletionView: View {
     let duration: TimeInterval
     let averageHeartRate: Double
     let startTime: Date
+    let pose: MeditationPose
     let onDismiss: () -> Void
     
     var body: some View {
@@ -118,7 +119,8 @@ struct CompletionView: View {
                 try await ConnectivityManager.shared.sendMeditationToPhone(
                     duration: duration,
                     averageHeartRate: averageHeartRate,
-                    startTime: startTime
+                    startTime: startTime,
+                    pose: pose
                 )
                 print("✅ Watch: Meditation synced to iPhone")
             } catch ConnectivityError.activationTimeout {
@@ -189,6 +191,7 @@ struct StatRow: View {
         duration: 300,
         averageHeartRate: 72,
         startTime: Date(),
+        pose: .lotus,
         onDismiss: {}
     )
 }

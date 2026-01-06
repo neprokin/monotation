@@ -143,9 +143,8 @@ struct TimerView: View {
             // Text: countdown or timer (unified typography)
             Group {
                 if countdownPhase == 0 {
-                    Text("На старт!")
+                    Text("🧘")
                         .font(.system(size: 60, weight: .light, design: .rounded))
-                        .foregroundStyle(.primary)
                 } else if countdownPhase > 0 {
                     Text("\(4 - countdownPhase)")
                         .font(.system(size: 60, weight: .light, design: .rounded))

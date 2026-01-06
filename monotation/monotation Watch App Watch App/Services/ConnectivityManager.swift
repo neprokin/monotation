@@ -54,7 +54,8 @@ class ConnectivityManager: NSObject, ObservableObject {
     func sendMeditationToPhone(
         duration: TimeInterval,
         averageHeartRate: Double,
-        startTime: Date
+        startTime: Date,
+        pose: MeditationPose
     ) async throws {
         // Wait for session activation
         try await waitForActivation()
@@ -69,7 +70,8 @@ class ConnectivityManager: NSObject, ObservableObject {
             "type": "saveMeditation",
             "duration": duration,
             "averageHeartRate": averageHeartRate,
-            "startTime": startTime.timeIntervalSince1970
+            "startTime": startTime.timeIntervalSince1970,
+            "pose": pose.rawValue
         ]
         
         print("⌚️ Watch: Sending meditation to iPhone...")

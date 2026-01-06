@@ -17,6 +17,10 @@ class WorkoutManager: NSObject, ObservableObject {
     @Published var averageHeartRate: Double = 0
     @Published var isSessionActive: Bool = false
     
+    // Settings
+    @Published var selectedDuration: TimeInterval = 900 // 15 minutes default
+    @Published var selectedPose: MeditationPose = .lotus
+    
     // MARK: - Private Properties
     private let healthStore = HKHealthStore()
     private var session: HKWorkoutSession?
