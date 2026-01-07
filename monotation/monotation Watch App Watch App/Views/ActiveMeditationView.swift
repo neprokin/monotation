@@ -125,13 +125,14 @@ struct ActiveMeditationView: View {
         print("🎯 [ActiveMeditation] Starting meditation timer")
         print("📊 [ActiveMeditation] Runtime session active: \(runtimeManager.isActive)")
         
-        // NOTE: Extended runtime session already started in MainView before countdown
+        // NOTE: Workout session already started in MainView during countdown
+        // This automatically enables Extended Runtime Session, so Timer works in background
         
         // Haptic feedback: подтверждение старта медитации
         print("📳 [ActiveMeditation] Playing START haptic")
         WKInterfaceDevice.current().play(.start)
         
-        workoutManager.startWorkout()
+        // Workout session is already running from countdown, no need to start again
         
         // Use Timer with RunLoop.main and .common mode (works in background)
         // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
@@ -246,12 +247,13 @@ struct ActiveMeditationView: View {
     }
     
     private func cleanup() {
-        print("🧹 [ActiveMeditation] Cleanup - stopping runtime session")
+        print("🧹 [ActiveMeditation] Cleanup")
         timer?.invalidate()
         timer = nil
         completionSignalTimer?.invalidate()  // NEW: очистка таймера вибраций
         completionSignalTimer = nil
-        runtimeManager.stop()  // NEW: останавливаем фоновый режим
+        // NOTE: Workout session will be ended by WorkoutManager when meditation completes
+        // No need to stop Extended Runtime Session - it's managed by Workout Session
     }
     
     // MARK: - Helpers

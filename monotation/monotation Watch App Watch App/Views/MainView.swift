@@ -114,7 +114,11 @@ struct MainView: View {
                     } else {
                         // Returning to main screen
                         Logger.shared.info("🛑 Returning to main screen - cleaning up")
-                        runtimeManager.stop()
+                        // End workout session if it was started during countdown
+                        if workoutManager.isSessionActive {
+                            Logger.shared.info("🏃 Ending workout session (user cancelled)")
+                            workoutManager.endWorkout()
+                        }
                         countdownTimer?.invalidate()
                         countdownTimer = nil
                         countdownPhase = -1
@@ -173,12 +177,13 @@ struct MainView: View {
         Logger.shared.info("🎬 COUNTDOWN START - Function called")
         Logger.shared.debug("Current state: countdownPhase=\(countdownPhase), countdownTickCount=\(countdownTickCount)")
         
-        // Start extended runtime session IMMEDIATELY on MainActor
-        // CRITICAL: Extended Runtime Sessions MUST start when app is in foreground
-        // If we delay with DispatchQueue.global, app might be backgrounded by then
-        Logger.shared.info("📱 Starting ExtendedRuntimeSession (must be in foreground)")
-        runtimeManager.start()
-        Logger.shared.debug("📱 runtimeManager.start() called")
+        // CRITICAL: Start Workout Session IMMEDIATELY to enable Extended Runtime Session
+        // Workout Session automatically activates Extended Runtime Session, which allows
+        // Timer to work even when screen is locked
+        // This is the ONLY reliable way to get Extended Runtime Session on watchOS
+        Logger.shared.info("🏃 Starting Workout Session to enable Extended Runtime Session")
+        workoutManager.startWorkout()
+        Logger.shared.debug("🏃 workoutManager.startWorkout() called")
         
         // Reset tick count
         Logger.shared.debug("🔄 Resetting countdownTickCount from \(countdownTickCount) to 0")
