@@ -148,27 +148,32 @@ struct MainView: View {
         countdownTickCount = 0
         print("⏱️ [MainView] Countdown phase 0 (emoji)")
         
-        // Use Timer instead of DispatchQueue.main.asyncAfter
-        // Timer continues to work even when screen is locked
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            self.countdownTickCount += 1
-            
-            print("⏱️ [MainView] Countdown tick \(self.countdownTickCount)")
-            
-            if self.countdownTickCount <= 3 {
-                // Phases 1-3: countdown numbers "3", "2", "1"
-                withAnimation {
-                    self.countdownPhase = self.countdownTickCount
+        // Use Timer with RunLoop.main and .common mode
+        // This ensures Timer works even when screen is locked
+        let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
+            DispatchQueue.main.async {
+                self.countdownTickCount += 1
+                
+                print("⏱️ [MainView] Countdown tick \(self.countdownTickCount)")
+                
+                if self.countdownTickCount <= 3 {
+                    // Phases 1-3: countdown numbers "3", "2", "1"
+                    withAnimation {
+                        self.countdownPhase = self.countdownTickCount
+                    }
+                } else {
+                    // Phase 4: start meditation
+                    timer.invalidate()
+                    self.countdownTimer = nil
+                    self.countdownPhase = -1
+                    self.navigateToMeditation = true
+                    print("✅ [MainView] Countdown completed - starting meditation")
                 }
-            } else {
-                // Phase 4: start meditation
-                timer.invalidate()
-                self.countdownTimer = nil
-                self.countdownPhase = -1
-                self.navigateToMeditation = true
-                print("✅ [MainView] Countdown completed - starting meditation")
             }
         }
+        
+        RunLoop.main.add(timer, forMode: .common)
+        countdownTimer = timer
     }
 }
 
