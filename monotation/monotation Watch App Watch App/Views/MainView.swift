@@ -11,10 +11,11 @@ import Combine
 
 struct MainView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
-    @StateObject private var runtimeManager = ExtendedRuntimeManager()  // NEW: управляем фоновой сессией
+    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager  // NEW: получаем из App
     @State private var showSettings = false
     @State private var countdownPhase: Int = -1 // -1 = idle, 0-3 = countdown
     @State private var navigateToMeditation = false
+    @State private var countdownTimer: Timer?  // NEW: Timer для countdown
     
     var body: some View {
         NavigationStack {
@@ -80,13 +81,21 @@ struct MainView: View {
                 }
                 .fullScreenCover(isPresented: $navigateToMeditation) {
                     ActiveMeditationView()
-                        .environmentObject(runtimeManager)  // NEW: передаем менеджер фоновой сессии
+                        // runtimeManager уже доступен через environmentObject
                 }
                 .onChange(of: navigateToMeditation) { _, isPresented in
                     // Остановить сессию когда возвращаемся на главный экран
                     if !isPresented {
                         runtimeManager.stop()
+                        countdownTimer?.invalidate()
+                        countdownTimer = nil
+                        countdownPhase = -1
                     }
+                }
+                .onDisappear {
+                    // Cleanup timer if view disappears
+                    countdownTimer?.invalidate()
+                    countdownTimer = nil
                 }
             }
         }
@@ -117,41 +126,51 @@ struct MainView: View {
     // MARK: - Countdown Logic
     
     private func startCountdown() {
-        // Start extended runtime session BEFORE countdown
+        print("🎬 [MainView] Starting countdown sequence")
+        
+        // Start extended runtime session ASYNCHRONOUSLY (don't block main thread!)
         // This ensures background operation even if user locks screen during countdown
-        runtimeManager.start()
+        DispatchQueue.global(qos: .userInitiated).async {
+            Task { @MainActor in
+                self.runtimeManager.start()
+            }
+        }
+        print("📱 [MainView] Requested extended runtime session (async)")
         
         // Phase 0: 🧘 emoji
         withAnimation {
             countdownPhase = 0
         }
+        print("⏱️ [MainView] Countdown phase 0 (emoji)")
         
-        // Phase 1: "3"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            withAnimation {
-                countdownPhase = 1
+        // Use Timer with RunLoop.main and .common mode
+        // This ensures Timer works even when screen is locked
+        var tickCount = 0
+        let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
+            tickCount += 1
+            
+            DispatchQueue.main.async {
+                print("⏱️ [MainView] Countdown tick \(tickCount)")
+                
+                if tickCount <= 3 {
+                    // Phases 1-3: countdown numbers "3", "2", "1"
+                    withAnimation {
+                        self.countdownPhase = tickCount
+                    }
+                } else {
+                    // Phase 4: start meditation
+                    timer.invalidate()
+                    self.countdownTimer = nil
+                    self.countdownPhase = -1
+                    self.navigateToMeditation = true
+                    print("✅ [MainView] Countdown completed - starting meditation")
+                }
             }
         }
         
-        // Phase 2: "2"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation {
-                countdownPhase = 2
-            }
-        }
-        
-        // Phase 3: "1"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            withAnimation {
-                countdownPhase = 3
-            }
-        }
-        
-        // Complete: start meditation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-            countdownPhase = -1
-            navigateToMeditation = true
-        }
+        // Add Timer to RunLoop with .common mode (works even when screen locked)
+        RunLoop.main.add(timer, forMode: .common)
+        countdownTimer = timer
     }
 }
 
@@ -159,5 +178,6 @@ struct MainView: View {
 #Preview {
     MainView()
         .environmentObject(WorkoutManager())
+        .environmentObject(ExtendedRuntimeManager())
 }
 

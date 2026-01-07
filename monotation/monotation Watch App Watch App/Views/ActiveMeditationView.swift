@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
-    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager  // Используем общий менеджер
+    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager  // Получаем из App через environment
     @Environment(\.dismiss) private var dismiss
     
     @State private var timeRemaining: TimeInterval = 0
@@ -122,20 +122,30 @@ struct ActiveMeditationView: View {
     private func startTimer() {
         startTime = Date()
         
+        print("🎯 [ActiveMeditation] Starting meditation timer")
+        print("📊 [ActiveMeditation] Runtime session active: \(runtimeManager.isActive)")
+        
         // NOTE: Extended runtime session already started in MainView before countdown
         
         // Haptic feedback: подтверждение старта медитации
+        print("📳 [ActiveMeditation] Playing START haptic")
         WKInterfaceDevice.current().play(.start)
         
         workoutManager.startWorkout()
         
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if timeRemaining > 0 {
-                timeRemaining -= 1
-            } else {
-                timerCompleted()
+        // Use Timer with RunLoop.main and .common mode (works in background)
+        let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
+            DispatchQueue.main.async {
+                if self.timeRemaining > 0 {
+                    self.timeRemaining -= 1
+                } else {
+                    self.timerCompleted()
+                }
             }
         }
+        
+        RunLoop.main.add(meditationTimer, forMode: .common)
+        timer = meditationTimer
     }
     
     private func pauseTimer() {
@@ -145,13 +155,20 @@ struct ActiveMeditationView: View {
     
     private func resumeTimer() {
         isPaused = false
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if timeRemaining > 0 {
-                timeRemaining -= 1
-            } else {
-                timerCompleted()
+        
+        // Use Timer with RunLoop.main and .common mode (works in background)
+        let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
+            DispatchQueue.main.async {
+                if self.timeRemaining > 0 {
+                    self.timeRemaining -= 1
+                } else {
+                    self.timerCompleted()
+                }
             }
         }
+        
+        RunLoop.main.add(meditationTimer, forMode: .common)
+        timer = meditationTimer
     }
     
     private func stopTimer() {
@@ -173,6 +190,9 @@ struct ActiveMeditationView: View {
         timer?.invalidate()
         workoutManager.endWorkout()
         
+        print("⏰ [ActiveMeditation] Timer COMPLETED")
+        print("📊 [ActiveMeditation] Runtime session active: \(runtimeManager.isActive)")
+        
         // NEW: Переходим в состояние ожидания подтверждения
         isWaitingForAcknowledgment = true
         
@@ -182,23 +202,33 @@ struct ActiveMeditationView: View {
     
     // NEW: Начать повторяющиеся вибрации о завершении
     private func startCompletionSignals() {
+        print("🔔 [ActiveMeditation] Starting repeating completion signals")
+        
         // Первая вибрация сразу
         playCompletionSignal()
         
-        // Затем каждую секунду
-        completionSignalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            playCompletionSignal()
+        // Затем каждую секунду (используем Timer с .common mode)
+        let signalTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
+            DispatchQueue.main.async {
+                self.playCompletionSignal()
+            }
         }
+        
+        RunLoop.main.add(signalTimer, forMode: .common)
+        completionSignalTimer = signalTimer
     }
     
     // NEW: Воспроизвести вибрацию завершения (БЕЗ звука на часах)
     private func playCompletionSignal() {
+        print("📳 [ActiveMeditation] Playing COMPLETION haptic (session active: \(runtimeManager.isActive))")
         // .success - короткая четкая вибрация (не длинный паттерн как .notification)
         WKInterfaceDevice.current().play(.success)
     }
     
     // NEW: Подтвердить завершение медитации
     private func acknowledgeMeditationCompletion() {
+        print("✅ [ActiveMeditation] User acknowledged completion - stopping signals")
+        
         // Останавливаем вибрации
         completionSignalTimer?.invalidate()
         completionSignalTimer = nil
@@ -209,6 +239,7 @@ struct ActiveMeditationView: View {
     }
     
     private func cleanup() {
+        print("🧹 [ActiveMeditation] Cleanup - stopping runtime session")
         timer?.invalidate()
         timer = nil
         completionSignalTimer?.invalidate()  // NEW: очистка таймера вибраций
@@ -230,6 +261,7 @@ struct ActiveMeditationView: View {
     NavigationStack {
         ActiveMeditationView()
             .environmentObject(WorkoutManager())
+            .environmentObject(ExtendedRuntimeManager())
     }
 }
 
