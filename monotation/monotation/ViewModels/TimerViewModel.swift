@@ -188,7 +188,10 @@ class TimerViewModel: ObservableObject {
     private func beginBackgroundTask() {
         backgroundTaskID = UIApplication.shared.beginBackgroundTask { [weak self] in
             // Task is about to expire, clean up
-            self?.endBackgroundTask()
+            // Use Task to call MainActor-isolated method from background context
+            Task { @MainActor in
+                self?.endBackgroundTask()
+            }
         }
         print("✅ Background task started: \(backgroundTaskID.rawValue)")
     }
