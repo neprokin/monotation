@@ -16,6 +16,7 @@ struct MainView: View {
     @State private var countdownPhase: Int = -1 // -1 = idle, 0-3 = countdown
     @State private var navigateToMeditation = false
     @State private var countdownTimer: Timer?  // NEW: Timer для countdown
+    @State private var countdownTickCount: Int = 0  // NEW: Track countdown ticks
     
     var body: some View {
         NavigationStack {
@@ -90,12 +91,14 @@ struct MainView: View {
                         countdownTimer?.invalidate()
                         countdownTimer = nil
                         countdownPhase = -1
+                        countdownTickCount = 0
                     }
                 }
                 .onDisappear {
                     // Cleanup timer if view disappears
                     countdownTimer?.invalidate()
                     countdownTimer = nil
+                    countdownTickCount = 0
                 }
             }
         }
@@ -137,6 +140,9 @@ struct MainView: View {
         }
         print("📱 [MainView] Requested extended runtime session (async)")
         
+        // Reset tick count
+        countdownTickCount = 0
+        
         // Phase 0: 🧘 emoji
         withAnimation {
             countdownPhase = 0
@@ -145,23 +151,16 @@ struct MainView: View {
         
         // Use Timer with RunLoop.main and .common mode
         // This ensures Timer works even when screen is locked
-        // Use @State variable to track tick count (properly captured)
-        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
-            
+        let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
             DispatchQueue.main.async {
-                // Calculate tick count from current phase
-                let currentTick = self.countdownPhase + 1
+                self.countdownTickCount += 1
                 
-                print("⏱️ [MainView] Countdown tick \(currentTick)")
+                print("⏱️ [MainView] Countdown tick \(self.countdownTickCount)")
                 
-                if currentTick <= 3 {
+                if self.countdownTickCount <= 3 {
                     // Phases 1-3: countdown numbers "3", "2", "1"
                     withAnimation {
-                        self.countdownPhase = currentTick
+                        self.countdownPhase = self.countdownTickCount
                     }
                 } else {
                     // Phase 4: start meditation
