@@ -217,9 +217,10 @@ struct MainView: View {
         Task { @MainActor in
             Logger.shared.debug("⏰ Creating Timer with interval 1.0s, repeats=true")
         }
-        let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
+        let timer = Timer(timeInterval: 1.0, repeats: true) { _ in
             // Timer closure runs on background thread, need Task for MainActor
             // Note: RunLoop.current cannot be accessed from async context
+            // Don't capture timer parameter (Timer is not Sendable) - use self.countdownTimer instead
             let currentMode = RunLoop.current.currentMode?.rawValue ?? "nil"
             // Log BEFORE Task to see if Timer fires at all (print is safe, Logger needs MainActor)
             print("🔔 [TIMER] FIRED - mode: \(currentMode)")
@@ -228,6 +229,7 @@ struct MainView: View {
             // This ensures code executes even when screen is locked
             // All Logger calls must be inside Task { @MainActor } because Logger is MainActor-isolated
             Task { @MainActor in
+                
                 Logger.shared.debug("🔔 TIMER CLOSURE FIRED - RunLoop mode: \(currentMode)")
                 Logger.shared.debug("📬 MAIN ACTOR TASK STARTED")
                 Logger.shared.debug("Before increment: countdownTickCount=\(self.countdownTickCount)")
@@ -250,7 +252,8 @@ struct MainView: View {
                     Logger.shared.debug("🛑 Invalidating timer")
                     
                     // Phase 4: start meditation
-                    timer.invalidate()
+                    // Use self.countdownTimer instead of capturing timer parameter (Timer is not Sendable)
+                    self.countdownTimer?.invalidate()
                     self.countdownTimer = nil
                     self.countdownPhase = -1
                     
