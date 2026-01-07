@@ -150,6 +150,7 @@ struct ActiveMeditationView: View {
     
     private func pauseTimer() {
         timer?.invalidate()
+        timer = nil  // NEW: clear reference to prevent memory leak
         isPaused = true
     }
     

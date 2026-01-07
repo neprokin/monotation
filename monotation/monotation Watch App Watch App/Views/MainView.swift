@@ -145,17 +145,23 @@ struct MainView: View {
         
         // Use Timer with RunLoop.main and .common mode
         // This ensures Timer works even when screen is locked
-        var tickCount = 0
-        let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
-            tickCount += 1
+        // Use @State variable to track tick count (properly captured)
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
             
             DispatchQueue.main.async {
-                print("⏱️ [MainView] Countdown tick \(tickCount)")
+                // Calculate tick count from current phase
+                let currentTick = self.countdownPhase + 1
                 
-                if tickCount <= 3 {
+                print("⏱️ [MainView] Countdown tick \(currentTick)")
+                
+                if currentTick <= 3 {
                     // Phases 1-3: countdown numbers "3", "2", "1"
                     withAnimation {
-                        self.countdownPhase = tickCount
+                        self.countdownPhase = currentTick
                     }
                 } else {
                     // Phase 4: start meditation

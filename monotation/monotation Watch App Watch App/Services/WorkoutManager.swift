@@ -113,6 +113,8 @@ class WorkoutManager: NSObject, ObservableObject {
                 print("✅ Workout session started")
             } catch {
                 print("❌ Failed to start workout: \(error.localizedDescription)")
+                // NEW: Clean up on error to prevent memory leaks
+                resetSession()
             }
         }
     }
