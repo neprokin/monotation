@@ -180,9 +180,11 @@ struct MainView: View {
         }
         let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
             // Timer closure runs on background thread, need Task for MainActor
+            // Note: RunLoop.current cannot be accessed from async context
+            let currentMode = RunLoop.current.currentMode?.rawValue ?? "nil"
             Task { @MainActor in
                 Logger.shared.debug("🔔 TIMER CLOSURE FIRED - This is INSIDE Timer closure")
-                Logger.shared.debug("Current RunLoop mode: \(RunLoop.current.currentMode?.rawValue ?? "nil")")
+                Logger.shared.debug("Current RunLoop mode: \(currentMode)")
             }
             
             DispatchQueue.main.async {
