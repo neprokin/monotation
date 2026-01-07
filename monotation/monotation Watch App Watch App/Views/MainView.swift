@@ -104,12 +104,20 @@ struct MainView: View {
                     }
                 }
                 .onDisappear {
-                    Logger.shared.info("👋 MAIN VIEW DISAPPEARED - cleaning up timer")
-                    // Cleanup timer if view disappears
-                    countdownTimer?.invalidate()
-                    countdownTimer = nil
-                    countdownTickCount = 0
-                    Logger.shared.info("✅ Timer cleanup complete")
+                    Logger.shared.info("👋 MAIN VIEW DISAPPEARED")
+                    // DON'T cleanup timer here if countdown is active!
+                    // When countdown starts, main view disappears but countdown view appears
+                    // Timer must continue running in countdown view
+                    if countdownPhase < 0 {
+                        // Only cleanup if countdown is NOT active
+                        Logger.shared.info("🛑 Countdown not active - cleaning up timer")
+                        countdownTimer?.invalidate()
+                        countdownTimer = nil
+                        countdownTickCount = 0
+                        Logger.shared.info("✅ Timer cleanup complete")
+                    } else {
+                        Logger.shared.info("⏱️ Countdown active (phase=\(countdownPhase)) - keeping timer alive")
+                    }
                 }
                 .onAppear {
                     Logger.shared.info("👁️ MAIN VIEW APPEARED")
