@@ -125,48 +125,41 @@ struct MainView: View {
     // MARK: - Countdown Logic
     
     private func startCountdown() {
-        print("🎬 [MainView] Starting countdown sequence")
-        
-        // Start extended runtime session BEFORE countdown
-        // This ensures background operation even if user locks screen during countdown
-        runtimeManager.start()
-        print("📱 [MainView] Requested extended runtime session")
+        // Start extended runtime session ASYNCHRONOUSLY (don't block main thread!)
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.runtimeManager.start()
+        }
         
         // Phase 0: 🧘 emoji
         withAnimation {
             countdownPhase = 0
         }
-        print("⏱️ [MainView] Countdown phase 0 (emoji)")
         
         // Phase 1: "3" (after 1 second)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             withAnimation {
-                self.countdownPhase = 1
+                countdownPhase = 1
             }
-            print("⏱️ [MainView] Countdown phase 1 (3)")
         }
         
         // Phase 2: "2" (after 2 seconds)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             withAnimation {
-                self.countdownPhase = 2
+                countdownPhase = 2
             }
-            print("⏱️ [MainView] Countdown phase 2 (2)")
         }
         
         // Phase 3: "1" (after 3 seconds)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             withAnimation {
-                self.countdownPhase = 3
+                countdownPhase = 3
             }
-            print("⏱️ [MainView] Countdown phase 3 (1)")
         }
         
         // Complete: start meditation (after 4 seconds)
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-            self.countdownPhase = -1
-            self.navigateToMeditation = true
-            print("✅ [MainView] Countdown completed - starting meditation")
+            countdownPhase = -1
+            navigateToMeditation = true
         }
     }
 }
