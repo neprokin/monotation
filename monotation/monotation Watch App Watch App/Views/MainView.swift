@@ -15,8 +15,6 @@ struct MainView: View {
     @State private var showSettings = false
     @State private var countdownPhase: Int = -1 // -1 = idle, 0-3 = countdown
     @State private var navigateToMeditation = false
-    @State private var countdownTimer: Timer? // NEW: Timer for countdown (works in background)
-    @State private var countdownTickCount: Int = 0 // NEW: Track countdown ticks
     
     var body: some View {
         NavigationStack {
@@ -95,17 +93,8 @@ struct MainView: View {
                     // Остановить сессию когда возвращаемся на главный экран
                     if !isPresented {
                         runtimeManager.stop()
-                        countdownTimer?.invalidate()
-                        countdownTimer = nil
                         countdownPhase = -1
-                        countdownTickCount = 0
                     }
-                }
-                .onDisappear {
-                    // Cleanup timer if view disappears
-                    countdownTimer?.invalidate()
-                    countdownTimer = nil
-                    countdownTickCount = 0
                 }
             }
         }
@@ -143,37 +132,42 @@ struct MainView: View {
         runtimeManager.start()
         print("📱 [MainView] Requested extended runtime session")
         
-        // Reset countdown
-        countdownPhase = 0
-        countdownTickCount = 0
+        // Phase 0: 🧘 emoji
+        withAnimation {
+            countdownPhase = 0
+        }
         print("⏱️ [MainView] Countdown phase 0 (emoji)")
         
-        // Use Timer with RunLoop.main and .common mode
-        // This ensures Timer works even when screen is locked
-        let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
-            DispatchQueue.main.async {
-                self.countdownTickCount += 1
-                
-                print("⏱️ [MainView] Countdown tick \(self.countdownTickCount)")
-                
-                if self.countdownTickCount <= 3 {
-                    // Phases 1-3: countdown numbers "3", "2", "1"
-                    withAnimation {
-                        self.countdownPhase = self.countdownTickCount
-                    }
-                } else {
-                    // Phase 4: start meditation
-                    timer.invalidate()
-                    self.countdownTimer = nil
-                    self.countdownPhase = -1
-                    self.navigateToMeditation = true
-                    print("✅ [MainView] Countdown completed - starting meditation")
-                }
+        // Phase 1: "3" (after 1 second)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation {
+                self.countdownPhase = 1
             }
+            print("⏱️ [MainView] Countdown phase 1 (3)")
         }
         
-        RunLoop.main.add(timer, forMode: .common)
-        countdownTimer = timer
+        // Phase 2: "2" (after 2 seconds)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation {
+                self.countdownPhase = 2
+            }
+            print("⏱️ [MainView] Countdown phase 2 (2)")
+        }
+        
+        // Phase 3: "1" (after 3 seconds)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation {
+                self.countdownPhase = 3
+            }
+            print("⏱️ [MainView] Countdown phase 3 (1)")
+        }
+        
+        // Complete: start meditation (after 4 seconds)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            self.countdownPhase = -1
+            self.navigateToMeditation = true
+            print("✅ [MainView] Countdown completed - starting meditation")
+        }
     }
 }
 
