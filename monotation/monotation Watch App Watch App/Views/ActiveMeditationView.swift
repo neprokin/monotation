@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import UserNotifications
+import WatchKit
 
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
@@ -210,6 +212,11 @@ struct ActiveMeditationView: View {
     private func startCompletionSignals() {
         print("🔔 [ActiveMeditation] Starting repeating completion signals")
         
+        // CRITICAL: Send Local Notification FIRST
+        // Local Notifications work even in Always On Display (AOD) mode
+        // and can wake the user with sound/haptic
+        sendCompletionNotification()
+        
         // Первая вибрация сразу
         playCompletionSignal()
         
@@ -226,11 +233,40 @@ struct ActiveMeditationView: View {
         completionSignalTimer = signalTimer
     }
     
+    // NEW: Send Local Notification for meditation completion
+    // This works even in Always On Display (AOD) mode when haptic is limited
+    private func sendCompletionNotification() {
+        print("🔔 [ActiveMeditation] Sending completion notification")
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Медитация завершена"
+        content.body = "Нажмите, чтобы завершить сессию"
+        content.sound = .default  // This will play sound and trigger haptic
+        content.interruptionLevel = .timeSensitive  // High priority notification
+        
+        // Trigger immediately
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+        
+        let request = UNNotificationRequest(
+            identifier: "meditation-complete-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ [ActiveMeditation] Failed to send notification: \(error)")
+            } else {
+                print("✅ [ActiveMeditation] Completion notification sent")
+            }
+        }
+    }
+    
     // NEW: Воспроизвести вибрацию завершения (БЕЗ звука на часах)
     private func playCompletionSignal() {
         print("📳 [ActiveMeditation] Playing COMPLETION haptic (session active: \(runtimeManager.isActive))")
-        // .success - короткая четкая вибрация (не длинный паттерн как .notification)
-        WKInterfaceDevice.current().play(.success)
+        // .notification - stronger haptic for important alerts, works better in AOD
+        WKInterfaceDevice.current().play(.notification)
     }
     
     // NEW: Подтвердить завершение медитации
