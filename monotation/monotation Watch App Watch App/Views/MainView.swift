@@ -170,20 +170,12 @@ struct MainView: View {
         Logger.shared.info("🎬 COUNTDOWN START - Function called")
         Logger.shared.debug("Current state: countdownPhase=\(countdownPhase), countdownTickCount=\(countdownTickCount)")
         
-        // Start extended runtime session ASYNCHRONOUSLY (don't block main thread!)
-        // This ensures background operation even if user locks screen during countdown
-        Task { @MainActor in
-            Logger.shared.debug("🚀 Starting ExtendedRuntimeSession async...")
-        }
-        DispatchQueue.global(qos: .userInitiated).async {
-            Task { @MainActor in
-                Logger.shared.debug("📱 Inside global queue async block")
-                Logger.shared.debug("📱 Inside Task @MainActor block")
-                self.runtimeManager.start()
-                Logger.shared.debug("📱 runtimeManager.start() called")
-            }
-        }
-        Logger.shared.info("📱 ExtendedRuntimeSession start requested (async)")
+        // Start extended runtime session IMMEDIATELY on MainActor
+        // CRITICAL: Extended Runtime Sessions MUST start when app is in foreground
+        // If we delay with DispatchQueue.global, app might be backgrounded by then
+        Logger.shared.info("📱 Starting ExtendedRuntimeSession (must be in foreground)")
+        runtimeManager.start()
+        Logger.shared.debug("📱 runtimeManager.start() called")
         
         // Reset tick count
         Logger.shared.debug("🔄 Resetting countdownTickCount from \(countdownTickCount) to 0")

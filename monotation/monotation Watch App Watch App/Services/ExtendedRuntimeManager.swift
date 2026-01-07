@@ -18,13 +18,16 @@ class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessi
         // Avoid starting multiple sessions
         guard session == nil else {
             print("⚠️ [ExtendedRuntime] Session already active")
+            Logger.shared.warn("⚠️ [ExtendedRuntime] Session already active")
             return
         }
         
         print("🚀 [ExtendedRuntime] Starting session...")
+        Logger.shared.info("🚀 [ExtendedRuntime] Starting session...")
         session = WKExtendedRuntimeSession()
         session?.delegate = self
         session?.start()
+        Logger.shared.debug("📱 [ExtendedRuntime] session.start() called - waiting for delegate callback")
         // NOTE: isActive will be set to true in delegate callback
     }
     
@@ -46,6 +49,7 @@ class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessi
         Task { @MainActor in
             self.isActive = true
             print("✅ [ExtendedRuntime] Session ACTIVE - background operation enabled")
+            Logger.shared.info("✅ [ExtendedRuntime] Session ACTIVE - background operation enabled")
         }
     }
     
@@ -82,8 +86,10 @@ class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessi
             }
             
             print("❌ [ExtendedRuntime] Session INVALIDATED - \(reasonText)")
+            Logger.shared.error("❌ [ExtendedRuntime] Session INVALIDATED - \(reasonText)")
             if let error = error {
                 print("   Error details: \(error.localizedDescription)")
+                Logger.shared.error("   Error details: \(error.localizedDescription)")
             }
         }
     }

@@ -134,8 +134,10 @@ struct ActiveMeditationView: View {
         workoutManager.startWorkout()
         
         // Use Timer with RunLoop.main and .common mode (works in background)
+        // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
+        // This ensures timer works even when screen is locked
         let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 if self.timeRemaining > 0 {
                     self.timeRemaining -= 1
                 } else {
@@ -158,8 +160,10 @@ struct ActiveMeditationView: View {
         isPaused = false
         
         // Use Timer with RunLoop.main and .common mode (works in background)
+        // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
+        // This ensures timer works even when screen is locked
         let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 if self.timeRemaining > 0 {
                     self.timeRemaining -= 1
                 } else {
@@ -209,8 +213,10 @@ struct ActiveMeditationView: View {
         playCompletionSignal()
         
         // Затем каждую секунду (используем Timer с .common mode)
+        // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
+        // This ensures haptic signals work even when screen is locked
         let signalTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 self.playCompletionSignal()
             }
         }
