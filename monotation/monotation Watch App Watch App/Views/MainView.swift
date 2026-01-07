@@ -25,10 +25,13 @@ struct MainView: View {
                 countdownView
                     .navigationBarHidden(true)
                     .onAppear {
-                        Logger.shared.info("👁️ COUNTDOWN VIEW APPEARED - countdownPhase=\(countdownPhase)")
+                        Logger.shared.info("👁️ COUNTDOWN VIEW APPEARED - countdownPhase=\(countdownPhase), timer=nil:\(countdownTimer == nil)")
+                    }
+                    .onDisappear {
+                        Logger.shared.warn("⚠️ COUNTDOWN VIEW DISAPPEARED - countdownPhase=\(countdownPhase), timer=nil:\(countdownTimer == nil)")
                     }
                     .onChange(of: countdownPhase) { oldValue, newValue in
-                        Logger.shared.info("🔄 COUNTDOWN PHASE CHANGED: \(oldValue) → \(newValue)")
+                        Logger.shared.info("🔄 COUNTDOWN PHASE CHANGED: \(oldValue) → \(newValue), timer=nil:\(countdownTimer == nil)")
                     }
             } else {
                 // Main screen (like Apple Workout)
@@ -198,10 +201,9 @@ struct MainView: View {
             // Timer closure runs on background thread, need Task for MainActor
             // Note: RunLoop.current cannot be accessed from async context
             let currentMode = RunLoop.current.currentMode?.rawValue ?? "nil"
-            Task { @MainActor in
-                Logger.shared.debug("🔔 TIMER CLOSURE FIRED - This is INSIDE Timer closure")
-                Logger.shared.debug("Current RunLoop mode: \(currentMode)")
-            }
+            // Log BEFORE Task to see if Timer fires at all
+            print("🔔 [TIMER] FIRED - mode: \(currentMode)")
+            Logger.shared.debug("🔔 TIMER CLOSURE FIRED - RunLoop mode: \(currentMode)")
             
             // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
             // This ensures code executes even when screen is locked
@@ -239,10 +241,6 @@ struct MainView: View {
                 }
                 
                 Logger.shared.debug("📬 MAIN ACTOR TASK FINISHED")
-            }
-            
-            Task { @MainActor in
-                Logger.shared.debug("🔔 TIMER CLOSURE FINISHED")
             }
         }
         
