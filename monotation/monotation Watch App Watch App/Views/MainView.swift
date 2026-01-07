@@ -24,6 +24,12 @@ struct MainView: View {
                 // Countdown screen
                 countdownView
                     .navigationBarHidden(true)
+                    .onAppear {
+                        Logger.shared.info("👁️ COUNTDOWN VIEW APPEARED - countdownPhase=\(countdownPhase)")
+                    }
+                    .onChange(of: countdownPhase) { oldValue, newValue in
+                        Logger.shared.info("🔄 COUNTDOWN PHASE CHANGED: \(oldValue) → \(newValue)")
+                    }
             } else {
                 // Main screen (like Apple Workout)
                 VStack(spacing: 0) {
@@ -85,20 +91,28 @@ struct MainView: View {
                         // runtimeManager уже доступен через environmentObject
                 }
                 .onChange(of: navigateToMeditation) { _, isPresented in
+                    Logger.shared.debug("🔄 navigateToMeditation changed: isPresented=\(isPresented)")
                     // Остановить сессию когда возвращаемся на главный экран
                     if !isPresented {
+                        Logger.shared.info("🛑 Returning to main screen - cleaning up")
                         runtimeManager.stop()
                         countdownTimer?.invalidate()
                         countdownTimer = nil
                         countdownPhase = -1
                         countdownTickCount = 0
+                        Logger.shared.info("✅ Cleanup complete")
                     }
                 }
                 .onDisappear {
+                    Logger.shared.info("👋 MAIN VIEW DISAPPEARED - cleaning up timer")
                     // Cleanup timer if view disappears
                     countdownTimer?.invalidate()
                     countdownTimer = nil
                     countdownTickCount = 0
+                    Logger.shared.info("✅ Timer cleanup complete")
+                }
+                .onAppear {
+                    Logger.shared.info("👁️ MAIN VIEW APPEARED")
                 }
             }
         }
@@ -129,53 +143,91 @@ struct MainView: View {
     // MARK: - Countdown Logic
     
     private func startCountdown() {
-        print("🎬 [MainView] Starting countdown sequence")
+        Logger.shared.info("🎬 COUNTDOWN START - Function called")
+        Logger.shared.debug("Current state: countdownPhase=\(countdownPhase), countdownTickCount=\(countdownTickCount)")
         
         // Start extended runtime session ASYNCHRONOUSLY (don't block main thread!)
         // This ensures background operation even if user locks screen during countdown
+        Logger.shared.debug("🚀 Starting ExtendedRuntimeSession async...")
         DispatchQueue.global(qos: .userInitiated).async {
+            Logger.shared.debug("📱 Inside global queue async block")
             Task { @MainActor in
+                Logger.shared.debug("📱 Inside Task @MainActor block")
                 self.runtimeManager.start()
+                Logger.shared.debug("📱 runtimeManager.start() called")
             }
         }
-        print("📱 [MainView] Requested extended runtime session (async)")
+        Logger.shared.info("📱 ExtendedRuntimeSession start requested (async)")
         
         // Reset tick count
+        Logger.shared.debug("🔄 Resetting countdownTickCount from \(countdownTickCount) to 0")
         countdownTickCount = 0
+        Logger.shared.debug("✅ countdownTickCount reset to \(countdownTickCount)")
         
         // Phase 0: 🧘 emoji
+        Logger.shared.debug("🎨 Setting countdownPhase to 0 (emoji) with animation")
         withAnimation {
             countdownPhase = 0
         }
-        print("⏱️ [MainView] Countdown phase 0 (emoji)")
+        Logger.shared.info("⏱️ COUNTDOWN PHASE 0 SET - countdownPhase=\(countdownPhase)")
         
         // Use Timer with RunLoop.main and .common mode
         // This ensures Timer works even when screen is locked
+        Logger.shared.debug("⏰ Creating Timer with interval 1.0s, repeats=true")
         let timer = Timer(timeInterval: 1.0, repeats: true) { timer in
+            Logger.shared.debug("🔔 TIMER CLOSURE FIRED - This is INSIDE Timer closure")
+            Logger.shared.debug("Current RunLoop mode: \(RunLoop.current.currentMode?.rawValue ?? "nil")")
+            
             DispatchQueue.main.async {
+                Logger.shared.debug("📬 DISPATCHQUEUE.MAIN.ASYNC BLOCK STARTED")
+                Logger.shared.debug("Before increment: countdownTickCount=\(self.countdownTickCount)")
+                
                 self.countdownTickCount += 1
                 
-                print("⏱️ [MainView] Countdown tick \(self.countdownTickCount)")
+                Logger.shared.info("⏱️ COUNTDOWN TICK \(self.countdownTickCount) - countdownTickCount incremented")
+                Logger.shared.debug("After increment: countdownTickCount=\(self.countdownTickCount), countdownPhase=\(self.countdownPhase)")
                 
                 if self.countdownTickCount <= 3 {
+                    Logger.shared.debug("✅ Tick \(self.countdownTickCount) <= 3, updating phase")
                     // Phases 1-3: countdown numbers "3", "2", "1"
+                    Logger.shared.debug("🎨 Setting countdownPhase to \(self.countdownTickCount) with animation")
                     withAnimation {
                         self.countdownPhase = self.countdownTickCount
                     }
+                    Logger.shared.info("✅ COUNTDOWN PHASE \(self.countdownTickCount) SET - countdownPhase=\(self.countdownPhase)")
                 } else {
+                    Logger.shared.info("✅ COUNTDOWN COMPLETED - Tick \(self.countdownTickCount) > 3")
                     // Phase 4: start meditation
+                    Logger.shared.debug("🛑 Invalidating timer")
                     timer.invalidate()
                     self.countdownTimer = nil
                     self.countdownPhase = -1
+                    Logger.shared.debug("🚀 Setting navigateToMeditation = true")
                     self.navigateToMeditation = true
-                    print("✅ [MainView] Countdown completed - starting meditation")
+                    Logger.shared.info("✅ COUNTDOWN COMPLETED - Starting meditation")
                 }
+                
+                Logger.shared.debug("📬 DISPATCHQUEUE.MAIN.ASYNC BLOCK FINISHED")
             }
+            
+            Logger.shared.debug("🔔 TIMER CLOSURE FINISHED")
         }
         
+        Logger.shared.debug("✅ Timer created: \(timer)")
+        Logger.shared.debug("📋 RunLoop.main state check before add")
+        Logger.shared.debug("RunLoop.main.isValid: \(RunLoop.main.isValid)")
+        Logger.shared.debug("RunLoop.main.currentMode: \(RunLoop.main.currentMode?.rawValue ?? "nil")")
+        
         // Add Timer to RunLoop with .common mode (works even when screen locked)
+        Logger.shared.debug("➕ Adding Timer to RunLoop.main with mode .common")
         RunLoop.main.add(timer, forMode: .common)
+        
+        Logger.shared.debug("✅ Timer added to RunLoop")
+        Logger.shared.debug("📋 RunLoop.main.currentMode after add: \(RunLoop.main.currentMode?.rawValue ?? "nil")")
+        
         countdownTimer = timer
+        Logger.shared.info("✅ COUNTDOWN TIMER SETUP COMPLETE - Timer stored in countdownTimer")
+        Logger.shared.debug("countdownTimer is nil: \(countdownTimer == nil)")
     }
 }
 

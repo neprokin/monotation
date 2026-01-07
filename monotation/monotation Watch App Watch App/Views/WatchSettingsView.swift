@@ -10,6 +10,7 @@ import SwiftUI
 struct WatchSettingsView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
     @Environment(\.dismiss) var dismiss
+    @State private var showLogs = false
     
     var body: some View {
         List {
@@ -34,9 +35,28 @@ struct WatchSettingsView: View {
             } header: {
                 Text("Поза по умолчанию")
             }
+            
+            // Debug section
+            Section {
+                Button {
+                    showLogs = true
+                } label: {
+                    HStack {
+                        Text("Debug Logs")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Debug")
+            }
         }
         .navigationTitle("Настройки")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showLogs) {
+            LogViewerView()
+        }
     }
 }
 
