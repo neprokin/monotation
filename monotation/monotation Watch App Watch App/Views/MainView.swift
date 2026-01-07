@@ -221,13 +221,14 @@ struct MainView: View {
             // Timer closure runs on background thread, need Task for MainActor
             // Note: RunLoop.current cannot be accessed from async context
             let currentMode = RunLoop.current.currentMode?.rawValue ?? "nil"
-            // Log BEFORE Task to see if Timer fires at all
+            // Log BEFORE Task to see if Timer fires at all (print is safe, Logger needs MainActor)
             print("🔔 [TIMER] FIRED - mode: \(currentMode)")
-            Logger.shared.debug("🔔 TIMER CLOSURE FIRED - RunLoop mode: \(currentMode)")
             
             // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
             // This ensures code executes even when screen is locked
+            // All Logger calls must be inside Task { @MainActor } because Logger is MainActor-isolated
             Task { @MainActor in
+                Logger.shared.debug("🔔 TIMER CLOSURE FIRED - RunLoop mode: \(currentMode)")
                 Logger.shared.debug("📬 MAIN ACTOR TASK STARTED")
                 Logger.shared.debug("Before increment: countdownTickCount=\(self.countdownTickCount)")
                 
