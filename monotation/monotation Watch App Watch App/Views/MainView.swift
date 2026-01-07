@@ -42,27 +42,34 @@ struct MainView: View {
                     }
                     
                     // Bottom toolbar with Play button
-                    HStack {
-                        Spacer()
-                        
-                        Button {
-                            startCountdown()
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(.white)
-                                    .frame(width: 50, height: 50)
-                                
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.black)
+                    VStack(spacing: 4) {
+                        HStack {
+                            Spacer()
+                            
+                            Button {
+                                startCountdown()
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(.white)
+                                        .frame(width: 50, height: 50)
+                                    
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(.black)
+                                }
                             }
+                            .buttonStyle(.plain)
+                            
+                            Spacer()
                         }
-                        .buttonStyle(.plain)
                         
-                        Spacer()
+                        // Version label
+                        Text(AppVersion.versionString)
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary.opacity(0.5))
                     }
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 4)
                 }
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
@@ -117,14 +124,18 @@ struct MainView: View {
     // MARK: - Countdown Logic
     
     private func startCountdown() {
+        print("🎬 [MainView] Starting countdown sequence")
+        
         // Start extended runtime session BEFORE countdown
         // This ensures background operation even if user locks screen during countdown
         runtimeManager.start()
+        print("📱 [MainView] Requested extended runtime session")
         
         // Phase 0: 🧘 emoji
         withAnimation {
             countdownPhase = 0
         }
+        print("⏱️ [MainView] Countdown phase 0 (emoji)")
         
         // Phase 1: "3"
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {

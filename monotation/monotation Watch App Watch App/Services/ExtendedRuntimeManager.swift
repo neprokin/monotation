@@ -11,38 +11,46 @@ import Combine
 
 @MainActor
 class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessionDelegate {
+    @Published var isActive: Bool = false  // NEW: Track session status
     private var session: WKExtendedRuntimeSession?
     
     func start() {
         // Avoid starting multiple sessions
         guard session == nil else {
-            print("⚠️ Extended runtime session already active")
+            print("⚠️ [ExtendedRuntime] Session already active")
             return
         }
         
+        print("🚀 [ExtendedRuntime] Starting session...")
         session = WKExtendedRuntimeSession()
         session?.delegate = self
         session?.start()
-        print("✅ Extended runtime session started")
     }
     
     func stop() {
+        guard session != nil else {
+            print("⚠️ [ExtendedRuntime] No session to stop")
+            return
+        }
+        
+        print("⏹️ [ExtendedRuntime] Stopping session...")
         session?.invalidate()
         session = nil
-        print("⏹️ Extended runtime session stopped")
+        isActive = false
     }
     
     // MARK: - WKExtendedRuntimeSessionDelegate
     
     nonisolated func extendedRuntimeSessionDidStart(_ extendedRuntimeSession: WKExtendedRuntimeSession) {
         Task { @MainActor in
-            print("✅ Extended runtime session started successfully")
+            self.isActive = true
+            print("✅ [ExtendedRuntime] Session ACTIVE - background operation enabled")
         }
     }
     
     nonisolated func extendedRuntimeSessionWillExpire(_ extendedRuntimeSession: WKExtendedRuntimeSession) {
         Task { @MainActor in
-            print("⚠️ Extended runtime session will expire")
+            print("⚠️ [ExtendedRuntime] Session will expire soon")
         }
     }
     
@@ -52,9 +60,23 @@ class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessi
         error: Error?
     ) {
         Task { @MainActor in
-            print("❌ Extended runtime session invalidated: \(reason.rawValue)")
+            self.isActive = false
+            
+            let reasonText: String
+            switch reason {
+            case .expired:
+                reasonText = "expired (time limit reached)"
+            case .resigned:
+                reasonText = "resigned (app moved to background)"
+            case .error:
+                reasonText = "error occurred"
+            @unknown default:
+                reasonText = "unknown reason (\(reason.rawValue))"
+            }
+            
+            print("❌ [ExtendedRuntime] Session INVALIDATED - \(reasonText)")
             if let error = error {
-                print("Error: \(error.localizedDescription)")
+                print("   Error details: \(error.localizedDescription)")
             }
         }
     }

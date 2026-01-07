@@ -122,9 +122,13 @@ struct ActiveMeditationView: View {
     private func startTimer() {
         startTime = Date()
         
+        print("🎯 [ActiveMeditation] Starting meditation timer")
+        print("📊 [ActiveMeditation] Runtime session active: \(runtimeManager.isActive)")
+        
         // NOTE: Extended runtime session already started in MainView before countdown
         
         // Haptic feedback: подтверждение старта медитации
+        print("📳 [ActiveMeditation] Playing START haptic")
         WKInterfaceDevice.current().play(.start)
         
         workoutManager.startWorkout()
@@ -173,6 +177,9 @@ struct ActiveMeditationView: View {
         timer?.invalidate()
         workoutManager.endWorkout()
         
+        print("⏰ [ActiveMeditation] Timer COMPLETED")
+        print("📊 [ActiveMeditation] Runtime session active: \(runtimeManager.isActive)")
+        
         // NEW: Переходим в состояние ожидания подтверждения
         isWaitingForAcknowledgment = true
         
@@ -182,6 +189,8 @@ struct ActiveMeditationView: View {
     
     // NEW: Начать повторяющиеся вибрации о завершении
     private func startCompletionSignals() {
+        print("🔔 [ActiveMeditation] Starting repeating completion signals")
+        
         // Первая вибрация сразу
         playCompletionSignal()
         
@@ -193,12 +202,15 @@ struct ActiveMeditationView: View {
     
     // NEW: Воспроизвести вибрацию завершения (БЕЗ звука на часах)
     private func playCompletionSignal() {
+        print("📳 [ActiveMeditation] Playing COMPLETION haptic (session active: \(runtimeManager.isActive))")
         // .success - короткая четкая вибрация (не длинный паттерн как .notification)
         WKInterfaceDevice.current().play(.success)
     }
     
     // NEW: Подтвердить завершение медитации
     private func acknowledgeMeditationCompletion() {
+        print("✅ [ActiveMeditation] User acknowledged completion - stopping signals")
+        
         // Останавливаем вибрации
         completionSignalTimer?.invalidate()
         completionSignalTimer = nil
@@ -209,6 +221,7 @@ struct ActiveMeditationView: View {
     }
     
     private func cleanup() {
+        print("🧹 [ActiveMeditation] Cleanup - stopping runtime session")
         timer?.invalidate()
         timer = nil
         completionSignalTimer?.invalidate()  // NEW: очистка таймера вибраций
