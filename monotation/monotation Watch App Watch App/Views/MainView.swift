@@ -89,11 +89,27 @@ struct MainView: View {
                 .fullScreenCover(isPresented: $navigateToMeditation) {
                     ActiveMeditationView()
                         // runtimeManager уже доступен через environmentObject
+                        .onAppear {
+                            Logger.shared.info("✅ ActiveMeditationView APPEARED - meditation started successfully")
+                        }
                 }
-                .onChange(of: navigateToMeditation) { _, isPresented in
-                    Logger.shared.debug("🔄 navigateToMeditation changed: isPresented=\(isPresented)")
-                    // Остановить сессию когда возвращаемся на главный экран
-                    if !isPresented {
+                .onChange(of: navigateToMeditation) { oldValue, newValue in
+                    Logger.shared.debug("🔄 navigateToMeditation changed: \(oldValue) → \(newValue)")
+                    
+                    if newValue {
+                        // Meditation is starting
+                        Logger.shared.info("🚀 Meditation navigation triggered - navigateToMeditation=true")
+                        
+                        // Add fallback: if fullScreenCover doesn't work, try again after delay
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                            if !self.navigateToMeditation {
+                                Logger.shared.warn("⚠️ Navigation failed, retrying...")
+                                self.navigateToMeditation = true
+                            }
+                        }
+                    } else {
+                        // Returning to main screen
                         Logger.shared.info("🛑 Returning to main screen - cleaning up")
                         runtimeManager.stop()
                         countdownTimer?.invalidate()
@@ -195,52 +211,42 @@ struct MainView: View {
                 Logger.shared.debug("Current RunLoop mode: \(currentMode)")
             }
             
-            DispatchQueue.main.async {
-                Task { @MainActor in
-                    Logger.shared.debug("📬 DISPATCHQUEUE.MAIN.ASYNC BLOCK STARTED")
-                    Logger.shared.debug("Before increment: countdownTickCount=\(self.countdownTickCount)")
-                }
+            // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
+            // This ensures code executes even when screen is locked
+            Task { @MainActor in
+                Logger.shared.debug("📬 MAIN ACTOR TASK STARTED")
+                Logger.shared.debug("Before increment: countdownTickCount=\(self.countdownTickCount)")
                 
                 self.countdownTickCount += 1
                 
-                Task { @MainActor in
-                    Logger.shared.info("⏱️ COUNTDOWN TICK \(self.countdownTickCount) - countdownTickCount incremented")
-                    Logger.shared.debug("After increment: countdownTickCount=\(self.countdownTickCount), countdownPhase=\(self.countdownPhase)")
-                }
+                Logger.shared.info("⏱️ COUNTDOWN TICK \(self.countdownTickCount) - countdownTickCount incremented")
+                Logger.shared.debug("After increment: countdownTickCount=\(self.countdownTickCount), countdownPhase=\(self.countdownPhase)")
                 
                 if self.countdownTickCount <= 3 {
-                    Task { @MainActor in
-                        Logger.shared.debug("✅ Tick \(self.countdownTickCount) <= 3, updating phase")
-                        Logger.shared.debug("🎨 Setting countdownPhase to \(self.countdownTickCount) with animation")
-                    }
+                    Logger.shared.debug("✅ Tick \(self.countdownTickCount) <= 3, updating phase")
+                    Logger.shared.debug("🎨 Setting countdownPhase to \(self.countdownTickCount) with animation")
                     // Phases 1-3: countdown numbers "3", "2", "1"
                     withAnimation {
                         self.countdownPhase = self.countdownTickCount
                     }
-                    Task { @MainActor in
-                        Logger.shared.info("✅ COUNTDOWN PHASE \(self.countdownTickCount) SET - countdownPhase=\(self.countdownPhase)")
-                    }
+                    Logger.shared.info("✅ COUNTDOWN PHASE \(self.countdownTickCount) SET - countdownPhase=\(self.countdownPhase)")
                 } else {
-                    Task { @MainActor in
-                        Logger.shared.info("✅ COUNTDOWN COMPLETED - Tick \(self.countdownTickCount) > 3")
-                        Logger.shared.debug("🛑 Invalidating timer")
-                    }
+                    Logger.shared.info("✅ COUNTDOWN COMPLETED - Tick \(self.countdownTickCount) > 3")
+                    Logger.shared.debug("🛑 Invalidating timer")
+                    
                     // Phase 4: start meditation
                     timer.invalidate()
                     self.countdownTimer = nil
                     self.countdownPhase = -1
-                    Task { @MainActor in
-                        Logger.shared.debug("🚀 Setting navigateToMeditation = true")
-                    }
+                    
+                    // CRITICAL: Set navigateToMeditation SYNCHRONOUSLY on MainActor
+                    // This ensures navigation works even when screen is locked
+                    Logger.shared.debug("🚀 Setting navigateToMeditation = true (synchronously)")
                     self.navigateToMeditation = true
-                    Task { @MainActor in
-                        Logger.shared.info("✅ COUNTDOWN COMPLETED - Starting meditation")
-                    }
+                    Logger.shared.info("✅ COUNTDOWN COMPLETED - Starting meditation (navigateToMeditation=\(self.navigateToMeditation))")
                 }
                 
-                Task { @MainActor in
-                    Logger.shared.debug("📬 DISPATCHQUEUE.MAIN.ASYNC BLOCK FINISHED")
-                }
+                Logger.shared.debug("📬 MAIN ACTOR TASK FINISHED")
             }
             
             Task { @MainActor in
