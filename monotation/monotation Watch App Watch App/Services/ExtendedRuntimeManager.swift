@@ -66,8 +66,6 @@ class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessi
             switch reason {
             case .expired:
                 reasonText = "expired (time limit reached)"
-            case .resigned:
-                reasonText = "resigned (app moved to background)"
             case .error:
                 reasonText = "error occurred"
             @unknown default:
