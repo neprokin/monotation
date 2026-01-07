@@ -150,12 +150,7 @@ struct MainView: View {
         
         // Use Timer instead of DispatchQueue.main.asyncAfter
         // Timer continues to work even when screen is locked
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
-            
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
             self.countdownTickCount += 1
             
             print("⏱️ [MainView] Countdown tick \(self.countdownTickCount)")
