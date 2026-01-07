@@ -72,51 +72,43 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Start Workout Session
-    func startWorkout() {
-        Task {
-            do {
-                // Request authorization if needed
-                try await requestAuthorization()
-                
-                // Configure workout
-                let configuration = HKWorkoutConfiguration()
-                configuration.activityType = .mindAndBody
-                configuration.locationType = .indoor
-                
-                // Create session
-                session = try HKWorkoutSession(
-                    healthStore: healthStore,
-                    configuration: configuration
-                )
-                
-                builder = session?.associatedWorkoutBuilder()
-                
-                // Set data source
-                builder?.dataSource = HKLiveWorkoutDataSource(
-                    healthStore: healthStore,
-                    workoutConfiguration: configuration
-                )
-                
-                // Set delegates
-                session?.delegate = self
-                builder?.delegate = self
-                
-                // Start session
-                sessionStartDate = Date()
-                session?.startActivity(with: sessionStartDate)
-                
-                // Begin collection
-                try await builder?.beginCollection(at: sessionStartDate!)
-                
-                isSessionActive = true
-                
-                print("✅ Workout session started")
-            } catch {
-                print("❌ Failed to start workout: \(error.localizedDescription)")
-                // NEW: Clean up on error to prevent memory leaks
-                resetSession()
-            }
-        }
+    func startWorkout() async throws {
+        // Request authorization if needed
+        try await requestAuthorization()
+        
+        // Configure workout
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .mindAndBody
+        configuration.locationType = .indoor
+        
+        // Create session
+        session = try HKWorkoutSession(
+            healthStore: healthStore,
+            configuration: configuration
+        )
+        
+        builder = session?.associatedWorkoutBuilder()
+        
+        // Set data source
+        builder?.dataSource = HKLiveWorkoutDataSource(
+            healthStore: healthStore,
+            workoutConfiguration: configuration
+        )
+        
+        // Set delegates
+        session?.delegate = self
+        builder?.delegate = self
+        
+        // Start session
+        sessionStartDate = Date()
+        session?.startActivity(with: sessionStartDate)
+        
+        // Begin collection
+        try await builder?.beginCollection(at: sessionStartDate!)
+        
+        isSessionActive = true
+        
+        print("✅ Workout session started")
     }
     
     // MARK: - End Workout Session

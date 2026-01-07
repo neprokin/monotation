@@ -177,13 +177,28 @@ struct MainView: View {
         Logger.shared.info("🎬 COUNTDOWN START - Function called")
         Logger.shared.debug("Current state: countdownPhase=\(countdownPhase), countdownTickCount=\(countdownTickCount)")
         
-        // CRITICAL: Start Workout Session IMMEDIATELY to enable Extended Runtime Session
+        // CRITICAL: Start Workout Session and WAIT for it to complete
         // Workout Session automatically activates Extended Runtime Session, which allows
         // Timer to work even when screen is locked
         // This is the ONLY reliable way to get Extended Runtime Session on watchOS
-        Logger.shared.info("🏃 Starting Workout Session to enable Extended Runtime Session")
-        workoutManager.startWorkout()
-        Logger.shared.debug("🏃 workoutManager.startWorkout() called")
+        // MUST wait for workout session to start BEFORE starting countdown timer
+        Task { @MainActor in
+            Logger.shared.info("🏃 Starting Workout Session to enable Extended Runtime Session")
+            do {
+                try await workoutManager.startWorkout()
+                Logger.shared.info("✅ Workout Session started - Extended Runtime Session should be active")
+                
+                // NOW start countdown timer after workout session is active
+                self.startCountdownTimer()
+            } catch {
+                Logger.shared.error("❌ Failed to start workout session: \(error.localizedDescription)")
+                // Start countdown anyway, but it may not work when screen locked
+                self.startCountdownTimer()
+            }
+        }
+    }
+    
+    private func startCountdownTimer() {
         
         // Reset tick count
         Logger.shared.debug("🔄 Resetting countdownTickCount from \(countdownTickCount) to 0")
