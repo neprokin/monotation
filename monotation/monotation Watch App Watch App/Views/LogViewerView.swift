@@ -20,7 +20,9 @@ struct LogViewerView: View {
                 
                 Text(logContent)
                     .font(.system(size: 10, design: .monospaced))
+                    #if !os(watchOS)
                     .textSelection(.enabled)
+                    #endif
             }
             .padding()
         }
