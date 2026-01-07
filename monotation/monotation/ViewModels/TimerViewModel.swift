@@ -39,7 +39,15 @@ class TimerViewModel: ObservableObject {
     deinit {
         timer?.cancel()
         completionSignalTimer?.cancel()  // NEW: очистка таймера сигналов
-        endBackgroundTask()  // NEW: очистка background task
+        
+        // NEW: очистка background task (directly call UIApplication, not MainActor method)
+        let taskID = backgroundTaskID
+        if taskID != .invalid {
+            Task { @MainActor in
+                UIApplication.shared.endBackgroundTask(taskID)
+            }
+        }
+        
         NotificationCenter.default.removeObserver(self)
     }
     
