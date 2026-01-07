@@ -16,6 +16,7 @@ struct MainView: View {
     @State private var countdownPhase: Int = -1 // -1 = idle, 0-3 = countdown
     @State private var navigateToMeditation = false
     @State private var countdownTimer: Timer? // NEW: Timer for countdown (works in background)
+    @State private var countdownTickCount: Int = 0 // NEW: Track countdown ticks
     
     var body: some View {
         NavigationStack {
@@ -97,12 +98,14 @@ struct MainView: View {
                         countdownTimer?.invalidate()
                         countdownTimer = nil
                         countdownPhase = -1
+                        countdownTickCount = 0
                     }
                 }
                 .onDisappear {
                     // Cleanup timer if view disappears
                     countdownTimer?.invalidate()
                     countdownTimer = nil
+                    countdownTickCount = 0
                 }
             }
         }
@@ -142,27 +145,32 @@ struct MainView: View {
         
         // Reset countdown
         countdownPhase = 0
+        countdownTickCount = 0
         print("⏱️ [MainView] Countdown phase 0 (emoji)")
         
         // Use Timer instead of DispatchQueue.main.asyncAfter
         // Timer continues to work even when screen is locked
-        var tickCount = 0
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
-            tickCount += 1
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
             
-            print("⏱️ [MainView] Countdown tick \(tickCount)")
+            self.countdownTickCount += 1
             
-            if tickCount <= 3 {
+            print("⏱️ [MainView] Countdown tick \(self.countdownTickCount)")
+            
+            if self.countdownTickCount <= 3 {
                 // Phases 1-3: countdown numbers "3", "2", "1"
                 withAnimation {
-                    countdownPhase = tickCount
+                    self.countdownPhase = self.countdownTickCount
                 }
             } else {
                 // Phase 4: start meditation
                 timer.invalidate()
-                countdownTimer = nil
-                countdownPhase = -1
-                navigateToMeditation = true
+                self.countdownTimer = nil
+                self.countdownPhase = -1
+                self.navigateToMeditation = true
                 print("✅ [MainView] Countdown completed - starting meditation")
             }
         }
