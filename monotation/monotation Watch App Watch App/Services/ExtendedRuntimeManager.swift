@@ -68,6 +68,16 @@ class ExtendedRuntimeManager: NSObject, ObservableObject, WKExtendedRuntimeSessi
                 reasonText = "expired (time limit reached)"
             case .error:
                 reasonText = "error occurred"
+            case .none:
+                reasonText = "none"
+            case .sessionInProgress:
+                reasonText = "sessionInProgress (another session active)"
+            case .resignedFrontmost:
+                reasonText = "resignedFrontmost (app moved to background)"
+            case .suppressedBySystem:
+                reasonText = "suppressedBySystem (system suspended session)"
+            @unknown default:
+                reasonText = "unknown reason (\(reason.rawValue))"
             }
             
             print("❌ [ExtendedRuntime] Session INVALIDATED - \(reasonText)")
