@@ -59,6 +59,19 @@ struct TimerView: View {
                         .animation(.easeInOut(duration: 0.3), value: viewModel.timerState.isWaitingForAcknowledgment)
                         .padding(.bottom, 80)
                     }
+                    
+                    // Version label (bottom right corner)
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            Text(AppVersion.versionString)
+                                .font(.caption2)
+                                .foregroundColor(.secondary.opacity(0.5))
+                                .padding(.trailing, 16)
+                                .padding(.bottom, 8)
+                        }
+                    }
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
             }
