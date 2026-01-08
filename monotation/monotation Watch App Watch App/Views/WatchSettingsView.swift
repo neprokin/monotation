@@ -36,6 +36,20 @@ struct WatchSettingsView: View {
                 Text("Поза по умолчанию")
             }
             
+            // Version section
+            Section {
+                HStack {
+                    Text("Версия")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("✨ NEW (v2.0)")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+            } header: {
+                Text("О приложении")
+            }
+            
             // Debug section
             Section {
                 Button {
