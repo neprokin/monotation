@@ -22,22 +22,13 @@ actor SupabaseService {
         if let url = URL(string: configURL),
            !configURL.contains("YOUR_SUPABASE_URL_HERE"),
            !configKey.contains("YOUR_SUPABASE_ANON_KEY_HERE") {
-            // Initialize Supabase client with AuthClient configuration
-            // This fixes the warning about emitLocalSessionAsInitialSession
-            // Use default localStorage (Keychain) and set emitLocalSessionAsInitialSession
-            let authConfig = AuthClient.Configuration(
-                localStorage: .keychain,
-                emitLocalSessionAsInitialSession: true
-            )
-            
-            let options = SupabaseClientOptions(
-                auth: authConfig
-            )
-            
+            // Initialize Supabase client
+            // TODO: Add AuthClient configuration with emitLocalSessionAsInitialSession: true
+            // when Supabase is properly configured. This will fix the deprecation warning.
+            // For now, use simple initialization to avoid compilation errors.
             self.client = SupabaseClient(
                 supabaseURL: url,
-                supabaseKey: configKey,
-                options: options
+                supabaseKey: configKey
             )
         } else {
             // Config not set up yet, client will be nil
