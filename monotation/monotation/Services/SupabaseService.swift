@@ -22,12 +22,15 @@ actor SupabaseService {
         if let url = URL(string: configURL),
            !configURL.contains("YOUR_SUPABASE_URL_HERE"),
            !configKey.contains("YOUR_SUPABASE_ANON_KEY_HERE") {
-            // Initialize Supabase client
-            // Note: emitLocalSessionAsInitialSession warning is non-critical
-            // and will be fixed in future SDK versions
+            // Initialize Supabase client with AuthClient configuration
+            // This fixes the warning about emitLocalSessionAsInitialSession
+            var authConfig = AuthClient.Configuration()
+            authConfig.emitLocalSessionAsInitialSession = true
+            
             self.client = SupabaseClient(
                 supabaseURL: url,
-                supabaseKey: configKey
+                supabaseKey: configKey,
+                auth: authConfig
             )
         } else {
             // Config not set up yet, client will be nil

@@ -40,7 +40,14 @@ class AuthService: NSObject, ObservableObject {
                let authClient = await supabaseService.authClient {
                 do {
                     let session = try await authClient.session
-                    await updateUser(from: session.user)
+                    // Check if session is expired (required with emitLocalSessionAsInitialSession: true)
+                    if session.isExpired {
+                        // Session expired, user needs to sign in again
+                        isAuthenticated = false
+                        currentUser = nil
+                    } else {
+                        await updateUser(from: session.user)
+                    }
                 } catch {
                     // No session - user not logged in
                     isAuthenticated = false
