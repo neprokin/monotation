@@ -27,10 +27,13 @@ actor SupabaseService {
             var authConfig = AuthClient.Configuration()
             authConfig.emitLocalSessionAsInitialSession = true
             
+            var options = SupabaseClientOptions()
+            options.auth = authConfig
+            
             self.client = SupabaseClient(
                 supabaseURL: url,
                 supabaseKey: configKey,
-                auth: authConfig
+                options: options
             )
         } else {
             // Config not set up yet, client will be nil
