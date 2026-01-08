@@ -9,6 +9,7 @@
 
 import WatchKit
 import Foundation
+import Combine
 
 /// Controller for Smart Alarm session - guarantees user notification at meditation end
 /// This is the "iron" guarantee - unlike Timer + WKInterfaceDevice.play() which are best-effort
@@ -18,10 +19,14 @@ final class MeditationAlarmController: NSObject, ObservableObject {
     // MARK: - Published State
     
     /// Is alarm session currently scheduled/active
-    @Published private(set) var isAlarmScheduled: Bool = false
+    @Published private(set) var isAlarmActive: Bool = false
     
     /// End date for the current meditation (for display/persistence)
     @Published private(set) var scheduledEndDate: Date?
+    
+    /// Was alarm stopped by user via system UI "Stop" button?
+    /// If true, user already acknowledged completion via system UI
+    @Published private(set) var wasStoppedBySystem: Bool = false
     
     // MARK: - Private
     
@@ -55,15 +60,8 @@ final class MeditationAlarmController: NSObject, ObservableObject {
         // Start session at specific time (Smart Alarm)
         session.start(at: endDate)
         
-        isAlarmScheduled = true
+        isAlarmActive = true
         print("✅ [Alarm] Alarm scheduled for \(endDate)")
-    }
-    
-    /// Reschedule alarm (for pause/resume)
-    /// - Parameter newEndDate: New end date after pause adjustment
-    func rescheduleAlarm(at newEndDate: Date) {
-        print("🔄 [Alarm] Rescheduling alarm to \(newEndDate)")
-        scheduleAlarm(at: newEndDate)
     }
     
     /// Cancel alarm (user stopped meditation early or acknowledged completion)
@@ -76,25 +74,43 @@ final class MeditationAlarmController: NSObject, ObservableObject {
         // Clear persisted endDate
         UserDefaults.standard.removeObject(forKey: endDateKey)
         scheduledEndDate = nil
-        isAlarmScheduled = false
+        isAlarmActive = false
+        wasStoppedBySystem = false  // Reset flag when manually cancelled
         
         print("✅ [Alarm] Alarm cancelled")
     }
     
+    /// Reset the wasStoppedBySystem flag (called when completion is shown)
+    func resetStoppedBySystemFlag() {
+        wasStoppedBySystem = false
+    }
+    
     /// Check for persisted alarm on app launch (crash recovery)
+    /// NOTE: On app launch, meditation is not active, so persisted alarm is not needed.
+    /// Clear it to avoid conflicts with active sessions (e.g., HKWorkoutSession).
+    /// Persisted alarm is only useful during active meditation for crash recovery.
     func checkForPersistedAlarm() {
         guard let endDate = UserDefaults.standard.object(forKey: endDateKey) as? Date else {
             print("📋 [Alarm] No persisted alarm found")
             return
         }
         
-        if endDate > Date() {
-            print("⚠️ [Alarm] Found persisted alarm for \(endDate) - rescheduling")
-            scheduleAlarm(at: endDate)
-        } else {
+        let now = Date()
+        let timeUntilAlarm = endDate.timeIntervalSince(now)
+        
+        // On app launch, meditation is not active, so persisted alarm is stale
+        // Clear it to avoid "only single session allowed" conflicts
+        if timeUntilAlarm <= 0 {
             print("⏰ [Alarm] Persisted alarm was in the past - clearing")
-            UserDefaults.standard.removeObject(forKey: endDateKey)
+        } else {
+            print("⚠️ [Alarm] Found persisted alarm for \(endDate) (in \(Int(timeUntilAlarm))s), but app just launched - clearing stale alarm")
         }
+        
+        // Always clear persisted alarm on app launch
+        // It will be rescheduled when user starts a new meditation
+        UserDefaults.standard.removeObject(forKey: endDateKey)
+        scheduledEndDate = nil
+        print("✅ [Alarm] Cleared persisted alarm - will be rescheduled when meditation starts")
     }
 }
 
@@ -150,8 +166,6 @@ extension MeditationAlarmController: WKExtendedRuntimeSessionDelegate {
             print("   → No specific reason")
         case .sessionInProgress:
             print("   → Another session already in progress")
-        case .sessionNotStarted:
-            print("   → Session was never started")
         case .error:
             print("   → Error occurred")
         case .expired:
@@ -168,7 +182,24 @@ extension MeditationAlarmController: WKExtendedRuntimeSessionDelegate {
         Task { @MainActor in
             if session === self.alarmSession {
                 self.alarmSession = nil
-                self.isAlarmScheduled = false
+                self.isAlarmActive = false
+                
+                // Check if user stopped alarm via system UI "Stop" button
+                // .none usually means user explicitly stopped (most common when user taps "Stop")
+                // .resignedFrontmost means app moved to background (may happen when user opens app)
+                // .suppressedBySystem is system-initiated (not user action)
+                // .expired means session expired (not user action)
+                // .error means error occurred (not user action)
+                let userStopped = (reason == .none)
+                print("👆 [Alarm] Session invalidated - reason: \(reason.rawValue), userStopped: \(userStopped)")
+                
+                if userStopped {
+                    print("✅ [Alarm] User stopped alarm via system UI 'Stop' button")
+                    self.wasStoppedBySystem = true
+                } else {
+                    print("ℹ️ [Alarm] Alarm stopped for other reason (not user action)")
+                    self.wasStoppedBySystem = false
+                }
             }
         }
     }

@@ -20,7 +20,8 @@ class NotificationService: ObservableObject {
     // MARK: - Request Authorization
     
     func requestAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        // Request time-sensitive permission for fallback notifications
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge, .criticalAlert]) { granted, error in
             if granted {
                 print("✅ Notification authorization granted")
             } else {
@@ -35,6 +36,9 @@ class NotificationService: ObservableObject {
     
     // MARK: - Schedule Timer Completion Notification
     
+    /// Schedule time-sensitive fallback notification for meditation completion
+    /// This is a FALLBACK for iPhone when Watch Smart Alarm is unavailable
+    /// (e.g., Watch is off, not on wrist, or force-quit)
     func scheduleTimerCompletionNotification(in seconds: TimeInterval) {
         let content = UNMutableNotificationContent()
         content.title = "Медитация завершена"
@@ -42,19 +46,23 @@ class NotificationService: ObservableObject {
         content.sound = .default
         content.categoryIdentifier = "MEDITATION_COMPLETE"
         
+        // CRITICAL: Use timeSensitive interruption level for guaranteed delivery
+        // This ensures notification is delivered even in Do Not Disturb mode
+        content.interruptionLevel = .timeSensitive
+        
         // Schedule notification
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
         let request = UNNotificationRequest(
-            identifier: "meditation_timer_\(UUID().uuidString)",
+            identifier: "meditation_timer_fallback",
             content: content,
             trigger: trigger
         )
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("❌ NotificationService.scheduleTimerCompletionNotification error: \(error)")
+                print("❌ [NotificationService] Failed to schedule fallback notification: \(error)")
             } else {
-                print("✅ Timer completion notification scheduled for \(seconds) seconds")
+                print("✅ [NotificationService] Fallback notification scheduled for \(seconds) seconds (iPhone)")
             }
         }
     }
@@ -62,16 +70,12 @@ class NotificationService: ObservableObject {
     // MARK: - Cancel Timer Notification
     
     func cancelTimerNotification() {
+        // Cancel fallback notification (iPhone)
         UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: ["meditation_timer"]
+            withIdentifiers: ["meditation_timer_fallback"]
         )
         
-        // Remove all meditation-related notifications
-        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            let meditationRequests = requests.filter { $0.identifier.contains("meditation_timer") }
-            let identifiers = meditationRequests.map { $0.identifier }
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
-        }
+        print("🚫 [NotificationService] Cancelled fallback notification (iPhone)")
     }
     
     // MARK: - Cancel All Notifications

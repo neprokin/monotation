@@ -4,9 +4,9 @@
 <dict>
 	<key>WKBackgroundModes</key>
 	<array>
-		<string>workout-processing</string>
-		<string>self-care</string>
-		<string>smart-alarm</string>
+		<string>alarm</string>
 	</array>
+	<key>CFBundleDisplayName</key>
+	<string>Медитация</string>
 </dict>
 </plist>

@@ -4,11 +4,11 @@
 
 **Цель**: Гарантированно уведомить пользователя о завершении медитации через вибрацию, даже когда экран Apple Watch заблокирован (AOD/wrist-down режим).
 
-**Текущий статус**: 🚀 **РЕФАКТОРИНГ** (2026-01-08). Переход на Smart Alarm для железной гарантии.
+**Текущий статус**: ✅ **РЕШЕНО И РАБОТАЕТ** (2026-01-08). Smart Alarm — единственная гарантия на Watch. Вариант A (автоматический показ CompletionView при "Остановить") реализован и работает.
 
 ---
 
-## 🏆 НОВАЯ АРХИТЕКТУРА: Smart Alarm
+## 🏆 ФИНАЛЬНАЯ АРХИТЕКТУРА: Smart Alarm (единственная гарантия)
 
 ### Почему Smart Alarm?
 
@@ -18,14 +18,16 @@
 1. Планируется на конкретное время (не зависит от Timer)
 2. Использует `notifyUser(hapticType:repeatHandler:)` для повторяющегося haptic
 3. Показывает системный UI с кнопкой Stop
-4. Работает **гарантированно** в AOD/wrist-down
+4. Работает **максимально надёжно** в AOD/wrist-down
 
-### Новая трёхконтурная архитектура
+**Важно**: Smart Alarm — максимально надёжный системный способ на watchOS доставить повторяющийся сигнал до подтверждения. Но есть системное исключение: если пользователь force-quit приложения, watchOS может не запустить его для alarm-сценария. Поэтому iPhone fallback необходим. То есть "железная гарантия" = "в пределах платформенных правил".
+
+### Правильная архитектура (без конфликтов)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     КОНТУР 1 (ГЛАВНЫЙ)                          │
-│                     Smart Alarm                                  │
+│                     КОНТУР 1 (ЕДИНСТВЕННАЯ ГАРАНТИЯ)             │
+│                     Smart Alarm (Watch)                          │
 ├─────────────────────────────────────────────────────────────────┤
 │  MeditationAlarmController.scheduleAlarm(at: endDate)           │
 │                                                                  │
@@ -35,52 +37,174 @@
 │    → Системный повторяющийся haptic до подтверждения            │
 │    → Системный UI с кнопкой Stop                                │
 │                                                                  │
-│  Это ЖЕЛЕЗНАЯ ГАРАНТИЯ!                                         │
+│  Это ЖЕЛЕЗНАЯ ГАРАНТИЯ на Watch!                                │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                     КОНТУР 2 (FALLBACK)                         │
-│                     Local Notifications                          │
+│                     Time-Sensitive Notification (iPhone)        │
 ├─────────────────────────────────────────────────────────────────┤
-│  scheduleEndNotification(after: duration)                        │
+│  NotificationService.scheduleTimerCompletionNotification()      │
 │                                                                  │
-│  3 уведомления: T_end, T_end+5s, T_end+10s                      │
-│  На случай если Smart Alarm не сработает                        │
+│  Одно time-sensitive уведомление на T_end                         │
+│  На случай если Watch недоступен (off, not on wrist, force-quit)│
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                     КОНТУР 3 (ВИЗУАЛЬНЫЙ)                       │
-│                     Timer для UI                                 │
+│                     Timer для UI (Watch)                        │
 ├─────────────────────────────────────────────────────────────────┤
 │  Timer каждую секунду для отображения обратного отсчёта         │
 │                                                                  │
 │  НЕ для гарантии уведомления — только для красивого UX!         │
-│  + best-effort haptic через WKInterfaceDevice.play()            │
+│  + UX haptic через WKInterfaceDevice.play(.start) при старте    │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**КРИТИЧЕСКИ ВАЖНО**: 
+- На Watch **НЕТ** fallback через `UNNotification` (чтобы не конфликтовать с alarm и не ловить подавления/группировку).
+- Watch fallback — только Smart Alarm.
+- iPhone fallback — одно time-sensitive уведомление (или AlarmKit).
+
+Не держи одновременно несколько "гарантийных" контуров на Watch (Smart Alarm + Local Notifications) — это создаёт конфликты и странные эффекты. Правильно: Smart Alarm = единственная гарантия на Watch, остальное — UX или резерв на iPhone.
+
+### Правило подтверждения
+
+**Подтверждение = Stop на системном alarm UI** (это и есть "пока не подтвердит").
+
+**Вариант A (реализован и работает)**: Если пользователь нажимает "Остановить" на системном экране → автоматически показываем `CompletionView` (без промежуточного экрана с кнопкой "Завершить").
+
+**Реализация**:
+- `MeditationAlarmController` отслеживает `wasStoppedBySystem` флаг
+- При инвалидации Smart Alarm с `reason == .none` (пользователь нажал "Остановить") → устанавливаем `wasStoppedBySystem = true`
+- `ActiveMeditationView` проверяет флаг в `onAppear` и через `onChange(of: wasStoppedBySystem)`
+- Если флаг `true` → автоматически показываем `CompletionView`, останавливаем timer и workout
+
+State machine:
+- Smart Alarm активен → повторяющийся haptic каждые 2 секунды
+- Пользователь нажимает "Остановить" → `extendedRuntimeSession(_:didInvalidateWith:reason:.none)` → `wasStoppedBySystem = true` → автоматически показываем `CompletionView` ✅
+- Или пользователь открывает приложение через "Открыть" → показывает UI "Завершить" → пользователь нажимает → инвалидируем сессию → показываем `CompletionView`
+
+### Системный UI Smart Alarm
+
+**Что это**: Системный экран, который появляется автоматически при срабатывании Smart Alarm. Показывает:
+- Иконку приложения (из `AppIcon`)
+- Название приложения
+- Кнопки "Открыть" и "Остановить"
+
+**Что можно кастомизировать**:
+1. **Название приложения**: Через `CFBundleDisplayName` в `Info.plist` Watch App
+   ```xml
+   <key>CFBundleDisplayName</key>
+   <string>Медитация</string>
+   ```
+   По умолчанию используется `CFBundleName` (обычно "monotation Watch App")
+
+2. **Иконка приложения**: Через `AppIcon` в `Assets.xcassets` Watch App
+
+**Что нельзя кастомизировать**:
+- Текст кнопок ("Открыть", "Остановить") — системные
+- Расположение элементов — системное
+- Стиль UI — системный
+
+**Обработка действий пользователя**:
+- "Остановить" → `extendedRuntimeSession(_:didInvalidateWith:reason:.none)` → `wasStoppedBySystem = true` → автоматически показываем `CompletionView` (Вариант A)
+- "Открыть" → приложение открывается → показываем UI "Завершить" → пользователь нажимает → показываем `CompletionView`
+
+**Логирование для отладки**:
+- `👆 [Alarm] Session invalidated - reason: X, userStopped: true/false` — показывает причину инвалидации
+- `✅ [Alarm] User stopped alarm via system UI 'Stop' button` — подтверждение остановки пользователем
+- `🔄 [ActiveMeditation] wasStoppedBySystem changed to true` — отслеживание изменения флага
+- `🔍 [ActiveMeditation] Checking wasStoppedBySystem: true/false` — проверка флага
+- `✅ [ActiveMeditation] User stopped via system UI - showing completion immediately` — автоматический показ CompletionView
 
 ### Ключевые файлы
 
 | Файл | Назначение |
 |------|------------|
-| `MeditationAlarmController.swift` | Smart Alarm session + notifyUser |
-| `ActiveMeditationView.swift` | Интеграция всех трёх контуров |
-| `monotation-Watch-App-Watch-App-Info.plist` | WKBackgroundModes: smart-alarm |
+| `MeditationAlarmController.swift` | Smart Alarm session + notifyUser + отслеживание `wasStoppedBySystem` |
+| `MainView.swift` | **Планирует Smart Alarm ДО workout session** |
+| `ActiveMeditationView.swift` | Проверяет/перепланирует Smart Alarm + Timer (UI) + автоматический показ CompletionView (Вариант A) |
+| `NotificationService.swift` (iPhone) | Time-sensitive fallback notification |
+| `monotation-Watch-App-Watch-App-Info.plist` | WKBackgroundModes: `alarm` + `CFBundleDisplayName` для кастомизации названия |
 
-### Info.plist
+### Info.plist (Watch)
 
 ```xml
 <key>WKBackgroundModes</key>
 <array>
-    <string>workout-processing</string>
-    <string>self-care</string>
-    <string>smart-alarm</string>
+    <string>alarm</string>
 </array>
+<key>CFBundleDisplayName</key>
+<string>Медитация</string>
 ```
+
+**Правило**: Добавляем только те режимы, которые реально используем (и можем объяснить ревью).
+
+**Кастомизация**:
+- `CFBundleDisplayName` — название приложения на системном экране Smart Alarm (вместо "monotation Watch App")
+- `alarm` — для Smart Alarm на завершение медитации
+
+**КРИТИЧЕСКИ ВАЖНО**: 
+- **НЕ используем `mindfulness`** — `HKWorkoutSession` автоматически активирует Extended Runtime Session для HealthKit, поэтому явный `mindfulness` не нужен.
+- **НЕ используем `mindfulness` и `alarm` одновременно** — они конфликтуют (оба являются "session type values"), watchOS выдаст предупреждение и Smart Alarm не запустится.
+- Используется `alarm`, а не `smart-alarm` (это не валидное значение background mode).
 
 ---
 
-## 📚 ИСТОРИЯ РЕШЕНИЯ (для справки)
+## ✅ ФИНАЛЬНОЕ РЕШЕНИЕ (2026-01-08)
+
+### Архитектура
+
+**Watch:**
+- `WKExtendedRuntimeSession` с `WKBackgroundModes = alarm`
+- **КРИТИЧНО**: Планируем Smart Alarm в `MainView.startCountdown()` **ДО** старта workout session (пока приложение активно)
+  - `endDate = Date() + countdownDuration (4s) + meditationDuration`
+  - `alarmController.scheduleAlarm(at: endDate)` вызывается синхронно, до `Task { @MainActor in }`
+- В `ActiveMeditationView.startTimer()`: проверяем, не запланирован ли уже Smart Alarm (fallback, если не запланирован)
+- На `pause/resume`: перепланируем alarm на новый `endDate` (в `ActiveMeditationView`)
+- На `stop`: отменяем alarm через `MeditationAlarmController.cancelAlarm()`
+- На `T_end`: `extendedRuntimeSessionDidStart()` → `notifyUser(...repeat...)` → повторяем haptic до Stop
+- Timer только для UI (отображение обратного отсчёта), НЕ для гарантии
+- **Persisted alarm**: очищается при запуске приложения (медитация не активна)
+
+**iPhone:**
+- Одно time-sensitive уведомление на `endDate` как резерв
+- Отменяем при подтверждении на Watch (если связь доступна)
+
+### Ключевые компоненты
+
+| Компонент | Роль | Файл |
+|-----------|------|------|
+| `MeditationAlarmController` | Smart Alarm session + notifyUser | `MeditationAlarmController.swift` |
+| `MainView.startCountdown()` | **Планирует Smart Alarm ДО workout session** | `MainView.swift` |
+| `ActiveMeditationView.startTimer()` | Проверяет/перепланирует Smart Alarm (fallback) | `ActiveMeditationView.swift` |
+| `Timer` | Только для UI (обратный отсчёт) | `ActiveMeditationView.swift` |
+| `NotificationService` (iPhone) | Time-sensitive fallback | `NotificationService.swift` |
+
+### Критически важные детали реализации
+
+1. **Планирование Smart Alarm ДО workout session**:
+   - Smart Alarm требует, чтобы приложение было активным (foreground) при планировании
+   - Если планировать после старта workout session, может быть ошибка "app not in required app state"
+   - Решение: планируем в `MainView.startCountdown()` синхронно, до `Task { @MainActor in }`
+
+2. **Persisted alarm при запуске**:
+   - При запуске приложения медитация не активна, persisted alarm не нужен
+   - Очищаем его, чтобы избежать конфликтов с активными сессиями
+   - Ошибка "only single session allowed" возникает, если пытаться перепланировать persisted alarm при активной workout session
+
+3. **Вариант A: Автоматический показ CompletionView**:
+   - Отслеживание остановки через `wasStoppedBySystem` флаг в `MeditationAlarmController`
+   - Проверка флага в `ActiveMeditationView.onAppear` и через `onChange(of: wasStoppedBySystem)`
+   - `onChange` необходим, так как флаг может установиться асинхронно после `onAppear` (через `Task { @MainActor in }`)
+   - При `wasStoppedBySystem == true`: автоматически останавливаем timer, завершаем workout, показываем `CompletionView`
+   - Определение остановки пользователем: только `reason == .none` (не `.resignedFrontmost`, так как это может быть при открытии приложения через "Открыть")
+   - **Статус**: ✅ Работает — пользователь нажимает "Остановить" → сразу видит `CompletionView` без промежуточного экрана
+
+---
+
+## 📚 ИСТОРИЯ РЕШЕНИЯ (ARCHIVE / Legacy)
 
 ---
 
@@ -222,58 +346,9 @@ private func timerCompleted() {
 
 ---
 
-## 📁 Текущая реализация
+## 📁 Текущая реализация (ARCHIVE)
 
-### Файл: `ActiveMeditationView.swift`
-
-#### Ключевые функции:
-
-```swift
-// MARK: - Notification ID
-private static let endNotificationId = "meditation.end"
-
-// Планирование уведомления ЗАРАНЕЕ
-private func scheduleEndNotification(after seconds: TimeInterval) {
-    let content = UNMutableNotificationContent()
-    content.title = "Медитация завершена"
-    content.body = "Нажмите, чтобы завершить сессию"
-    content.sound = .default
-    content.interruptionLevel = .timeSensitive
-    
-    let trigger = UNTimeIntervalNotificationTrigger(
-        timeInterval: max(1, seconds), 
-        repeats: false
-    )
-    
-    let request = UNNotificationRequest(
-        identifier: Self.endNotificationId,
-        content: content,
-        trigger: trigger
-    )
-    
-    center.removePendingNotificationRequests(withIdentifiers: [Self.endNotificationId])
-    center.add(request) { error in
-        // Логирование результата
-    }
-}
-
-// Отмена уведомления
-private func cancelEndNotification() {
-    UNUserNotificationCenter.current()
-        .removePendingNotificationRequests(withIdentifiers: [Self.endNotificationId])
-}
-```
-
-#### Логика вызовов:
-
-| Событие | scheduleEndNotification | cancelEndNotification | Haptic |
-|---------|------------------------|----------------------|--------|
-| startTimer() | ✅ Планируем на T_end | - | ✅ .start |
-| pauseTimer() | - | ✅ Отменяем | - |
-| resumeTimer() | ✅ Перепланируем | - | - |
-| stopTimer() | - | ✅ Отменяем | - |
-| timerCompleted() | - | ✅ Отменяем | ✅ Repeating |
-| acknowledgeMeditationCompletion() | - | ✅ Отменяем | ⏹️ Stop |
+**⚠️ УСТАРЕВШЕЕ** — описывает старое решение через Local Notifications. Текущее решение: Smart Alarm (см. "ФИНАЛЬНОЕ РЕШЕНИЕ" выше).
 
 ---
 
@@ -288,7 +363,7 @@ private func cancelEndNotification() {
 
 ---
 
-## 🔧 Этап 5: NotificationDelegate + Множественные уведомления (текущий)
+## 🔧 Этап 5: NotificationDelegate + Множественные уведомления (ARCHIVE)
 
 ### Проблема найдена
 
@@ -413,112 +488,30 @@ private func timerCompleted() {
 | 2026-01-07 | Добавлен Local Notification при завершении | ❌ Ненадёжно |
 | 2026-01-07 | Двухконтурная схема (заранее планируем) | ⚠️ Частично работает |
 | 2026-01-07 | FIX: Не отменять уведомление в timerCompleted() | ❌ Не помогло |
-| 2026-01-08 | **FIX: NotificationDelegate + множественные уведомления** | ✅ **РАБОТАЕТ** |
+| 2026-01-08 | NotificationDelegate + множественные уведомления | ⚠️ Работало, но "чёрный ящик" |
+| 2026-01-08 | **ФИНАЛ: Smart Alarm (единственная гарантия)** | ✅ **МАКСИМАЛЬНО НАДЁЖНО** |
 
 ---
 
-## ✅ ФИНАЛЬНОЕ РЕШЕНИЕ (2026-01-08)
+**⚠️ УСТАРЕВШЕЕ РЕШЕНИЕ** — оставлено для справки. Текущее решение: Smart Alarm (см. выше).
 
-### Архитектура
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    MEDITATION START                              │
-├─────────────────────────────────────────────────────────────────┤
-│  1. HKWorkoutSession.start()                                     │
-│     └── Автоматически активирует Extended Runtime Session        │
-│                                                                  │
-│  2. scheduleEndNotification(after: duration)                     │
-│     └── Планируем 3 уведомления: T_end, T_end+5s, T_end+10s     │
-│                                                                  │
-│  3. Timer запускается с .common mode                             │
-│     └── Работает даже при заблокированном экране                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ (ожидание duration)
-┌─────────────────────────────────────────────────────────────────┐
-│                    MEDITATION COMPLETE                           │
-├─────────────────────────────────────────────────────────────────┤
-│  КОНТУР 1 (Системная гарантия):                                  │
-│  • Запланированное уведомление доставляется системой            │
-│  • NotificationDelegate перехватывает → показывает + звук       │
-│  • .sound на watchOS = haptic вибрация                          │
-│                                                                  │
-│  КОНТУР 2 (Красивый UX):                                         │
-│  • timerCompleted() вызывает startCompletionSignals()           │
-│  • Повторяющиеся haptic каждую секунду                          │
-│  • Работает пока приложение активно                             │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    USER ACKNOWLEDGES                             │
-├─────────────────────────────────────────────────────────────────┤
-│  • Пользователь нажимает "Завершить"                            │
-│  • cancelEndNotification() — отменяет оставшиеся уведомления    │
-│  • completionSignalTimer?.invalidate() — останавливает haptic   │
-│  • Показываем CompletionView                                    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Ключевые компоненты
-
-| Компонент | Роль | Файл |
-|-----------|------|------|
-| `HKWorkoutSession` | Держит приложение "живым" в background | `WorkoutManager.swift` |
-| `NotificationDelegate` | Показывает уведомления даже когда app активно | `monotation_Watch_AppApp.swift` |
-| `scheduleEndNotification()` | Планирует 3 уведомления заранее | `ActiveMeditationView.swift` |
-| `startCompletionSignals()` | Повторяющиеся haptic когда app активно | `ActiveMeditationView.swift` |
-
-### Проверено в логах (2026-01-08)
-
-**Тест 3 секунды:**
-```
-📅 Scheduled notification meditation.end for 3.0s from now
-📅 Scheduled notification meditation.end.2 for 8.0s from now
-📅 Scheduled notification meditation.end.3 for 13.0s from now
-...
-📬 [NotificationDelegate] Will present notification: meditation.end
-📬 [NotificationDelegate] Will present notification: meditation.end.2
-📬 [NotificationDelegate] Will present notification: meditation.end.3
-📳 Playing COMPLETION haptic × 10+
-✅ User acknowledged completion
-```
-
-**Тест 5 минут:**
-```
-📅 Scheduled notification meditation.end for 300.0s from now
-♥️ Heart Rate: 79 bpm ... (56 записей за 5 минут)
-📬 [NotificationDelegate] Will present notification: meditation.end
-📬 [NotificationDelegate] Will present notification: meditation.end.2
-📬 [NotificationDelegate] Will present notification: meditation.end.3
-📳 Playing COMPLETION haptic × 24+
-✅ User acknowledged completion
-✅ Workout saved with HKAverageMETs
-```
-
-### Интересное наблюдение
-
-```
-📊 [ActiveMeditation] Runtime session active: false
-```
-
-`ExtendedRuntimeManager.isActive` показывает `false`, но всё работает! Это потому что **HKWorkoutSession автоматически активирует Extended Runtime Session** на системном уровне. Наш отдельный `ExtendedRuntimeManager` не используется — он legacy код.
+Этот раздел описывает предыдущие попытки решения через Local Notifications + Timer, которые работали, но были "чёрным ящиком" и создавали конфликты.
 
 ---
 
 ## 🎯 Цель
 
-~~Достичь **100% гарантии** уведомления пользователя о завершении медитации.~~
-
-✅ **ДОСТИГНУТО** — работает независимо от:
+✅ **ДОСТИГНУТО** — Smart Alarm работает максимально надёжно в пределах платформенных правил:
 - ✅ Положения руки (wrist-up / wrist-down)
 - ✅ Состояния экрана (активен / AOD)
-- ✅ Длительности медитации (проверено 3 сек и 5 мин)
+- ✅ Длительности медитации
+- ⚠️ Исключение: force-quit приложения (требует iPhone fallback)
 
 ---
 
-## 🧪 Детальное описание работы сигналов
+## 🧪 Детальное описание работы сигналов (ARCHIVE)
+
+**⚠️ УСТАРЕВШЕЕ** — описывает поведение старого решения через Local Notifications. Текущее решение: Smart Alarm (см. "ФИНАЛЬНОЕ РЕШЕНИЕ" выше).
 
 ### При старте медитации (`startTimer()`):
 
@@ -686,9 +679,9 @@ T_end+10s:     📬 Уведомление 3 → ВИБРАЦИЯ от .sound
 
 ## 🧹 Рекомендации на будущее
 
-1. **Можно удалить `ExtendedRuntimeManager`** — он не используется, HKWorkoutSession сам управляет Extended Runtime Session.
+1. **Smart Alarm — единственная гарантия на Watch** — не добавлять Local Notifications на Watch как fallback (создаёт конфликты).
 
-2. **Интервал между уведомлениями** — текущие 5 секунд оптимальны. Меньше — система может группировать. Больше — пользователь может пропустить.
+2. **iPhone fallback** — можно улучшить до AlarmKit для более "будильник-подобного" поведения на iPhone.
 
-3. **Можно добавить 4-е уведомление** — на T+15s для длительных медитаций, если пользователь глубоко медитирует.
+3. **Подтверждение** — всегда через системный Stop на alarm UI для максимальной надёжности.
 

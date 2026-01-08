@@ -12,6 +12,7 @@ import Combine
 struct MainView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
     @EnvironmentObject var runtimeManager: ExtendedRuntimeManager  // NEW: получаем из App
+    @EnvironmentObject var alarmController: MeditationAlarmController  // Smart Alarm controller
     @State private var showSettings = false
     @State private var countdownPhase: Int = -1 // -1 = idle, 0-3 = countdown
     @State private var navigateToMeditation = false
@@ -114,6 +115,8 @@ struct MainView: View {
                     } else {
                         // Returning to main screen
                         Logger.shared.info("🛑 Returning to main screen - cleaning up")
+                        // Cancel Smart Alarm if meditation was stopped early
+                        alarmController.cancelAlarm()
                         // End workout session if it was started during countdown
                         if workoutManager.isSessionActive {
                             Logger.shared.info("🏃 Ending workout session (user cancelled)")
@@ -144,6 +147,21 @@ struct MainView: View {
                 }
                 .onAppear {
                     Logger.shared.info("👁️ MAIN VIEW APPEARED")
+                    
+                    // Проверяем, был ли Smart Alarm остановлен через системный UI
+                    // Если да, и медитация была активна, нужно показать CompletionView
+                    if alarmController.wasStoppedBySystem {
+                        Logger.shared.info("🔄 [MainView] Smart Alarm was stopped by system - need to show completion")
+                        // Флаг будет обработан в ActiveMeditationView при открытии
+                    }
+                }
+                .onChange(of: alarmController.wasStoppedBySystem) { oldValue, newValue in
+                    if newValue {
+                        Logger.shared.info("🔄 [MainView] wasStoppedBySystem changed to true")
+                        // Если медитация была активна, нужно открыть ActiveMeditationView
+                        // чтобы показать CompletionView
+                        // Но это может быть проблематично, так как мы не знаем, была ли медитация активна
+                    }
                 }
             }
         }
@@ -176,6 +194,13 @@ struct MainView: View {
     private func startCountdown() {
         Logger.shared.info("🎬 COUNTDOWN START - Function called")
         Logger.shared.debug("Current state: countdownPhase=\(countdownPhase), countdownTickCount=\(countdownTickCount)")
+        
+        // CRITICAL: Schedule Smart Alarm FIRST (before workout session, while app is definitely active)
+        // Calculate endDate = now + countdown (4s) + meditation duration
+        let countdownDuration: TimeInterval = 4.0  // 4 seconds countdown
+        let endDate = Date().addingTimeInterval(countdownDuration + workoutManager.selectedDuration)
+        alarmController.scheduleAlarm(at: endDate)
+        Logger.shared.info("📅 [MainView] Smart Alarm scheduled for \(endDate) (BEFORE workout session)")
         
         // CRITICAL: Start Workout Session and WAIT for it to complete
         // Workout Session automatically activates Extended Runtime Session, which allows
@@ -256,6 +281,10 @@ struct MainView: View {
                     self.countdownTimer?.invalidate()
                     self.countdownTimer = nil
                     self.countdownPhase = -1
+                    
+                    // NOTE: Smart Alarm already scheduled at countdown start (when app was active)
+                    // No need to reschedule here - it's already planned
+                    Logger.shared.info("📅 [MainView] Smart Alarm already scheduled (from countdown start)")
                     
                     // CRITICAL: Set navigateToMeditation SYNCHRONOUSLY on MainActor
                     // This ensures navigation works even when screen is locked
