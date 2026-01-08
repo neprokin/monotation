@@ -47,7 +47,7 @@ struct TimerView: View {
                                     .transition(.opacity)
                             }
                             
-                            // NEW: Show "Завершить" button when waiting for acknowledgment
+                            // Show "Завершить" button when waiting for acknowledgment
                             if viewModel.timerState.isWaitingForAcknowledgment {
                                 acknowledgmentButton
                                     .transition(.scale.combined(with: .opacity))
@@ -152,7 +152,7 @@ struct TimerView: View {
             // Progress circle (monochrome - primary color)
             Circle()
                 .trim(from: 0, to: {
-                    // NEW: В состоянии завершения - 100%
+                    // In completion state - 100%
                     if viewModel.timerState.isWaitingForAcknowledgment {
                         return 1.0
                     } else if countdownPhase >= 0 {
@@ -172,7 +172,7 @@ struct TimerView: View {
             // Text: countdown, timer, or completion checkmark (unified typography)
             Group {
                 if viewModel.timerState.isWaitingForAcknowledgment {
-                    // NEW: Показываем галочку при завершении
+                    // Show checkmark on completion
                     Text("✓")
                         .font(.system(size: 80, weight: .light, design: .rounded))
                         .foregroundStyle(.primary)
