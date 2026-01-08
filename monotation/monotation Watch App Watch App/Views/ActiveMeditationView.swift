@@ -119,8 +119,10 @@ struct ActiveMeditationView: View {
         }
     }
     
-    // MARK: - Notification ID for scheduled end notification
+    // MARK: - Notification IDs for scheduled end notifications
     private static let endNotificationId = "meditation.end"
+    private static let endNotificationId2 = "meditation.end.2"
+    private static let endNotificationId3 = "meditation.end.3"
     
     // MARK: - Timer Control
     
@@ -234,43 +236,69 @@ struct ActiveMeditationView: View {
     
     // MARK: - Scheduled Notification (Контур 1 - гарантия в AOD/wrist-down)
     
-    /// Планируем уведомление ЗАРАНЕЕ на время окончания медитации
+    /// Планируем НЕСКОЛЬКО уведомлений ЗАРАНЕЕ на время окончания медитации
     /// Это гарантирует доставку даже если приложение в background/inactive (AOD/wrist-down)
+    /// Планируем 3 уведомления: T_end, T_end+5s, T_end+10s для надёжности
     private func scheduleEndNotification(after seconds: TimeInterval) {
         let center = UNUserNotificationCenter.current()
         
-        let content = UNMutableNotificationContent()
-        content.title = "Медитация завершена"
-        content.body = "Нажмите, чтобы завершить сессию"
-        content.sound = .default  // Системный звук + haptic
-        content.interruptionLevel = .timeSensitive  // Высокий приоритет
+        // Удаляем все предыдущие уведомления
+        center.removePendingNotificationRequests(withIdentifiers: [
+            Self.endNotificationId,
+            Self.endNotificationId2,
+            Self.endNotificationId3
+        ])
         
-        // Минимум 1 секунда для trigger
-        let triggerTime = max(1, seconds)
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: triggerTime, repeats: false)
+        // Планируем 3 уведомления с интервалом 5 секунд
+        let delays: [(String, TimeInterval)] = [
+            (Self.endNotificationId, 0),
+            (Self.endNotificationId2, 5),
+            (Self.endNotificationId3, 10)
+        ]
         
-        let request = UNNotificationRequest(
-            identifier: Self.endNotificationId,
-            content: content,
-            trigger: trigger
-        )
-        
-        // Удаляем предыдущее уведомление (если было) и добавляем новое
-        center.removePendingNotificationRequests(withIdentifiers: [Self.endNotificationId])
-        center.add(request) { error in
-            if let error = error {
-                print("❌ [ActiveMeditation] Failed to schedule end notification: \(error)")
-            } else {
-                print("📅 [ActiveMeditation] Scheduled end notification for \(triggerTime)s from now")
+        for (id, delay) in delays {
+            let content = UNMutableNotificationContent()
+            content.title = delay == 0 ? "Медитация завершена" : "🧘 Медитация завершена"
+            content.body = delay == 0 ? "Нажмите, чтобы завершить" : "Нажмите для подтверждения"
+            content.sound = .default  // Системный звук + haptic на watchOS
+            content.interruptionLevel = .timeSensitive  // Высокий приоритет
+            
+            // Минимум 1 секунда для trigger
+            let triggerTime = max(1, seconds + delay)
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: triggerTime, repeats: false)
+            
+            let request = UNNotificationRequest(
+                identifier: id,
+                content: content,
+                trigger: trigger
+            )
+            
+            center.add(request) { error in
+                if let error = error {
+                    print("❌ [ActiveMeditation] Failed to schedule notification \(id): \(error)")
+                } else {
+                    print("📅 [ActiveMeditation] Scheduled notification \(id) for \(triggerTime)s from now")
+                }
             }
         }
     }
     
-    /// Отменяем запланированное уведомление (при паузе, досрочном завершении, или когда обрабатываем сами)
+    /// Отменяем ВСЕ запланированные уведомления (при паузе, досрочном завершении, подтверждении)
     private func cancelEndNotification() {
         UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [Self.endNotificationId])
-        print("🚫 [ActiveMeditation] Cancelled pending end notification")
+            .removePendingNotificationRequests(withIdentifiers: [
+                Self.endNotificationId,
+                Self.endNotificationId2,
+                Self.endNotificationId3
+            ])
+        // Также удаляем уже доставленные уведомления из центра
+        UNUserNotificationCenter.current()
+            .removeDeliveredNotifications(withIdentifiers: [
+                Self.endNotificationId,
+                Self.endNotificationId2,
+                Self.endNotificationId3
+            ])
+        print("🚫 [ActiveMeditation] Cancelled all pending/delivered notifications")
     }
     
     // NEW: Контур 2 - начать повторяющиеся вибрации о завершении (когда app активно)
