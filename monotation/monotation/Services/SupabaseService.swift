@@ -24,12 +24,15 @@ actor SupabaseService {
            !configKey.contains("YOUR_SUPABASE_ANON_KEY_HERE") {
             // Initialize Supabase client with AuthClient configuration
             // This fixes the warning about emitLocalSessionAsInitialSession
-            var authConfig = AuthClient.Configuration()
-            authConfig.emitLocalSessionAsInitialSession = true
-            authConfig.localStorage = AuthLocalStorageKeychain()
+            // Use default localStorage (Keychain) and set emitLocalSessionAsInitialSession
+            let authConfig = AuthClient.Configuration(
+                localStorage: .keychain,
+                emitLocalSessionAsInitialSession: true
+            )
             
-            var options = SupabaseClientOptions()
-            options.auth = authConfig
+            let options = SupabaseClientOptions(
+                auth: authConfig
+            )
             
             self.client = SupabaseClient(
                 supabaseURL: url,
