@@ -26,6 +26,7 @@ actor SupabaseService {
             // This fixes the warning about emitLocalSessionAsInitialSession
             var authConfig = AuthClient.Configuration()
             authConfig.emitLocalSessionAsInitialSession = true
+            authConfig.localStorage = AuthLocalStorageKeychain()
             
             var options = SupabaseClientOptions()
             options.auth = authConfig
