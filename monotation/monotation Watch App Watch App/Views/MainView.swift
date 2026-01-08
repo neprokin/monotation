@@ -3,21 +3,20 @@
 //  monotation Watch App
 //
 //  Main screen with emoji, title, and play button (like Apple Workout)
+//  Handles countdown sequence before meditation starts
 //
 
 import SwiftUI
 import WatchKit
-import Combine
 
 struct MainView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
-    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager  // NEW: получаем из App
-    @EnvironmentObject var alarmController: MeditationAlarmController  // Smart Alarm controller
+    @EnvironmentObject var alarmController: MeditationAlarmController
     @State private var showSettings = false
     @State private var countdownPhase: Int = -1 // -1 = idle, 0-3 = countdown
     @State private var navigateToMeditation = false
-    @State private var countdownTimer: Timer?  // NEW: Timer для countdown
-    @State private var countdownTickCount: Int = 0  // NEW: Track countdown ticks
+    @State private var countdownTimer: Timer?
+    @State private var countdownTickCount: Int = 0
     
     var body: some View {
         NavigationStack {
@@ -25,144 +24,77 @@ struct MainView: View {
                 // Countdown screen
                 countdownView
                     .navigationBarHidden(true)
-                    .onAppear {
-                        Logger.shared.info("👁️ COUNTDOWN VIEW APPEARED - countdownPhase=\(countdownPhase), timer=nil:\(countdownTimer == nil)")
-                    }
-                    .onDisappear {
-                        Logger.shared.warn("⚠️ COUNTDOWN VIEW DISAPPEARED - countdownPhase=\(countdownPhase), timer=nil:\(countdownTimer == nil)")
-                    }
-                    .onChange(of: countdownPhase) { oldValue, newValue in
-                        Logger.shared.info("🔄 COUNTDOWN PHASE CHANGED: \(oldValue) → \(newValue), timer=nil:\(countdownTimer == nil)")
-                    }
             } else {
                 // Main screen (like Apple Workout)
-                VStack(spacing: 0) {
-                    // Content area
-                    VStack(spacing: 4) {
-                        Spacer()
+                mainScreen
+            }
+        }
+    }
+    
+    // MARK: - Main Screen
+    
+    private var mainScreen: some View {
+        VStack(spacing: 0) {
+            // Content area
+            VStack(spacing: 4) {
+                Spacer()
+                
+                // Emoji icon
+                Text("🧘")
+                    .font(.system(size: 40))
+                
+                // Title
+                Text("Медитация")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.primary)
+                
+                Spacer()
+            }
+            
+            // Bottom toolbar with Play button
+            HStack {
+                Spacer()
+                
+                Button {
+                    startCountdown()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 50, height: 50)
                         
-                        // Emoji icon (smaller)
-                        Text("🧘")
-                            .font(.system(size: 40))
-                        
-                        // Title (smaller)
-                        Text("Медитация")
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundStyle(.primary)
-                        
-                        Spacer()
-                    }
-                    
-                    // Bottom toolbar with Play button
-                    HStack {
-                        Spacer()
-                        
-                        Button {
-                            startCountdown()
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(.white)
-                                    .frame(width: 50, height: 50)
-                                
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.black)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        
-                        Spacer()
-                    }
-                    .padding(.bottom, 8)
-                }
-                .navigationTitle("")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            showSettings = true
-                        } label: {
-                            Image(systemName: "gearshape")
-                        }
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(.black)
                     }
                 }
-                .sheet(isPresented: $showSettings) {
-                    WatchSettingsView()
+                .buttonStyle(.plain)
+                
+                Spacer()
+            }
+            .padding(.bottom, 8)
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
                 }
-                .fullScreenCover(isPresented: $navigateToMeditation) {
-                    ActiveMeditationView()
-                        // runtimeManager уже доступен через environmentObject
-                        .onAppear {
-                            Logger.shared.info("✅ ActiveMeditationView APPEARED - meditation started successfully")
-                        }
-                }
-                .onChange(of: navigateToMeditation) { oldValue, newValue in
-                    Logger.shared.debug("🔄 navigateToMeditation changed: \(oldValue) → \(newValue)")
-                    
-                    if newValue {
-                        // Meditation is starting
-                        Logger.shared.info("🚀 Meditation navigation triggered - navigateToMeditation=true")
-                        
-                        // Add fallback: if fullScreenCover doesn't work, try again after delay
-                        Task { @MainActor in
-                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                            if !self.navigateToMeditation {
-                                Logger.shared.warn("⚠️ Navigation failed, retrying...")
-                                self.navigateToMeditation = true
-                            }
-                        }
-                    } else {
-                        // Returning to main screen
-                        Logger.shared.info("🛑 Returning to main screen - cleaning up")
-                        // Cancel Smart Alarm if meditation was stopped early
-                        alarmController.cancelAlarm()
-                        // End workout session if it was started during countdown
-                        if workoutManager.isSessionActive {
-                            Logger.shared.info("🏃 Ending workout session (user cancelled)")
-                            workoutManager.endWorkout()
-                        }
-                        countdownTimer?.invalidate()
-                        countdownTimer = nil
-                        countdownPhase = -1
-                        countdownTickCount = 0
-                        Logger.shared.info("✅ Cleanup complete")
-                    }
-                }
-                .onDisappear {
-                    Logger.shared.info("👋 MAIN VIEW DISAPPEARED")
-                    // DON'T cleanup timer here if countdown is active!
-                    // When countdown starts, main view disappears but countdown view appears
-                    // Timer must continue running in countdown view
-                    if countdownPhase < 0 {
-                        // Only cleanup if countdown is NOT active
-                        Logger.shared.info("🛑 Countdown not active - cleaning up timer")
-                        countdownTimer?.invalidate()
-                        countdownTimer = nil
-                        countdownTickCount = 0
-                        Logger.shared.info("✅ Timer cleanup complete")
-                    } else {
-                        Logger.shared.info("⏱️ Countdown active (phase=\(countdownPhase)) - keeping timer alive")
-                    }
-                }
-                .onAppear {
-                    Logger.shared.info("👁️ MAIN VIEW APPEARED")
-                    
-                    // Проверяем, был ли Smart Alarm остановлен через системный UI
-                    // Если да, и медитация была активна, нужно показать CompletionView
-                    if alarmController.wasStoppedBySystem {
-                        Logger.shared.info("🔄 [MainView] Smart Alarm was stopped by system - need to show completion")
-                        // Флаг будет обработан в ActiveMeditationView при открытии
-                    }
-                }
-                .onChange(of: alarmController.wasStoppedBySystem) { oldValue, newValue in
-                    if newValue {
-                        Logger.shared.info("🔄 [MainView] wasStoppedBySystem changed to true")
-                        // Если медитация была активна, нужно открыть ActiveMeditationView
-                        // чтобы показать CompletionView
-                        // Но это может быть проблематично, так как мы не знаем, была ли медитация активна
-                    }
-                }
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            WatchSettingsView()
+        }
+        .fullScreenCover(isPresented: $navigateToMeditation) {
+            ActiveMeditationView()
+        }
+        .onChange(of: navigateToMeditation) { oldValue, newValue in
+            if !newValue {
+                // Returning to main screen - cleanup
+                cleanup()
             }
         }
     }
@@ -191,139 +123,85 @@ struct MainView: View {
     
     // MARK: - Countdown Logic
     
+    /// Start countdown sequence
+    /// CRITICAL: Schedule Smart Alarm BEFORE workout session (while app is active)
     private func startCountdown() {
-        Logger.shared.info("🎬 COUNTDOWN START - Function called")
-        Logger.shared.debug("Current state: countdownPhase=\(countdownPhase), countdownTickCount=\(countdownTickCount)")
-        
-        // CRITICAL: Schedule Smart Alarm FIRST (before workout session, while app is definitely active)
-        // Calculate endDate = now + countdown (4s) + meditation duration
+        // 1. Schedule Smart Alarm FIRST (before workout session, while app is definitely active)
         let countdownDuration: TimeInterval = 4.0  // 4 seconds countdown
         let endDate = Date().addingTimeInterval(countdownDuration + workoutManager.selectedDuration)
         alarmController.scheduleAlarm(at: endDate)
-        Logger.shared.info("📅 [MainView] Smart Alarm scheduled for \(endDate) (BEFORE workout session)")
         
-        // CRITICAL: Start Workout Session and WAIT for it to complete
-        // Workout Session automatically activates Extended Runtime Session, which allows
-        // Timer to work even when screen is locked
-        // This is the ONLY reliable way to get Extended Runtime Session on watchOS
-        // MUST wait for workout session to start BEFORE starting countdown timer
+        // 2. Start workout session (activates Extended Runtime Session)
         Task { @MainActor in
-            Logger.shared.info("🏃 Starting Workout Session to enable Extended Runtime Session")
             do {
                 try await workoutManager.startWorkout()
-                Logger.shared.info("✅ Workout Session started - Extended Runtime Session should be active")
-                
-                // NOW start countdown timer after workout session is active
-                self.startCountdownTimer()
+                // 3. Start countdown timer after workout session is active
+                startCountdownTimer()
             } catch {
-                Logger.shared.error("❌ Failed to start workout session: \(error.localizedDescription)")
+                print("❌ Failed to start workout session: \(error.localizedDescription)")
                 // Start countdown anyway, but it may not work when screen locked
-                self.startCountdownTimer()
+                startCountdownTimer()
             }
         }
     }
     
+    /// Start countdown timer
     private func startCountdownTimer() {
-        
         // Reset tick count
-        Logger.shared.debug("🔄 Resetting countdownTickCount from \(countdownTickCount) to 0")
         countdownTickCount = 0
-        Logger.shared.debug("✅ countdownTickCount reset to \(countdownTickCount)")
         
         // Phase 0: 🧘 emoji
-        Logger.shared.debug("🎨 Setting countdownPhase to 0 (emoji) with animation")
         withAnimation {
             countdownPhase = 0
         }
-        Logger.shared.info("⏱️ COUNTDOWN PHASE 0 SET - countdownPhase=\(countdownPhase)")
         
-        // Use Timer with RunLoop.main and .common mode
-        // This ensures Timer works even when screen is locked
-        Task { @MainActor in
-            Logger.shared.debug("⏰ Creating Timer with interval 1.0s, repeats=true")
-        }
+        // Create timer with RunLoop.main and .common mode (works even when screen locked)
         let timer = Timer(timeInterval: 1.0, repeats: true) { _ in
-            // Timer closure runs on background thread, need Task for MainActor
-            // Note: RunLoop.current cannot be accessed from async context
-            // Don't capture timer parameter (Timer is not Sendable) - use self.countdownTimer instead
-            let currentMode = RunLoop.current.currentMode?.rawValue ?? "nil"
-            // Log BEFORE Task to see if Timer fires at all (print is safe, Logger needs MainActor)
-            print("🔔 [TIMER] FIRED - mode: \(currentMode)")
-            
-            // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
-            // This ensures code executes even when screen is locked
-            // All Logger calls must be inside Task { @MainActor } because Logger is MainActor-isolated
             Task { @MainActor in
-                
-                Logger.shared.debug("🔔 TIMER CLOSURE FIRED - RunLoop mode: \(currentMode)")
-                Logger.shared.debug("📬 MAIN ACTOR TASK STARTED")
-                Logger.shared.debug("Before increment: countdownTickCount=\(self.countdownTickCount)")
-                
                 self.countdownTickCount += 1
                 
-                Logger.shared.info("⏱️ COUNTDOWN TICK \(self.countdownTickCount) - countdownTickCount incremented")
-                Logger.shared.debug("After increment: countdownTickCount=\(self.countdownTickCount), countdownPhase=\(self.countdownPhase)")
-                
                 if self.countdownTickCount <= 3 {
-                    Logger.shared.debug("✅ Tick \(self.countdownTickCount) <= 3, updating phase")
-                    Logger.shared.debug("🎨 Setting countdownPhase to \(self.countdownTickCount) with animation")
                     // Phases 1-3: countdown numbers "3", "2", "1"
                     withAnimation {
                         self.countdownPhase = self.countdownTickCount
                     }
-                    Logger.shared.info("✅ COUNTDOWN PHASE \(self.countdownTickCount) SET - countdownPhase=\(self.countdownPhase)")
                 } else {
-                    Logger.shared.info("✅ COUNTDOWN COMPLETED - Tick \(self.countdownTickCount) > 3")
-                    Logger.shared.debug("🛑 Invalidating timer")
-                    
                     // Phase 4: start meditation
-                    // Use self.countdownTimer instead of capturing timer parameter (Timer is not Sendable)
                     self.countdownTimer?.invalidate()
                     self.countdownTimer = nil
                     self.countdownPhase = -1
-                    
-                    // NOTE: Smart Alarm already scheduled at countdown start (when app was active)
-                    // No need to reschedule here - it's already planned
-                    Logger.shared.info("📅 [MainView] Smart Alarm already scheduled (from countdown start)")
-                    
-                    // CRITICAL: Set navigateToMeditation SYNCHRONOUSLY on MainActor
-                    // This ensures navigation works even when screen is locked
-                    Logger.shared.debug("🚀 Setting navigateToMeditation = true (synchronously)")
                     self.navigateToMeditation = true
-                    Logger.shared.info("✅ COUNTDOWN COMPLETED - Starting meditation (navigateToMeditation=\(self.navigateToMeditation))")
                 }
-                
-                Logger.shared.debug("📬 MAIN ACTOR TASK FINISHED")
             }
         }
         
-        Task { @MainActor in
-            Logger.shared.debug("✅ Timer created: \(timer)")
-            Logger.shared.debug("📋 RunLoop.main state check before add")
-            Logger.shared.debug("RunLoop.main.currentMode: \(RunLoop.main.currentMode?.rawValue ?? "nil")")
-        }
-        
-        // Add Timer to RunLoop with .common mode (works even when screen locked)
-        Task { @MainActor in
-            Logger.shared.debug("➕ Adding Timer to RunLoop.main with mode .common")
-        }
+        // Add timer to RunLoop with .common mode (works even when screen locked)
         RunLoop.main.add(timer, forMode: .common)
+        countdownTimer = timer
+    }
+    
+    /// Cleanup when returning to main screen
+    private func cleanup() {
+        // Cancel Smart Alarm if meditation was stopped early
+        alarmController.cancelAlarm()
         
-        Task { @MainActor in
-            Logger.shared.debug("✅ Timer added to RunLoop")
-            Logger.shared.debug("📋 RunLoop.main.currentMode after add: \(RunLoop.main.currentMode?.rawValue ?? "nil")")
+        // End workout session if it was started
+        if workoutManager.isSessionActive {
+            workoutManager.endWorkout()
         }
         
-        countdownTimer = timer
-        Logger.shared.info("✅ COUNTDOWN TIMER SETUP COMPLETE - Timer stored in countdownTimer")
-        Logger.shared.debug("countdownTimer is nil: \(countdownTimer == nil)")
+        // Cleanup countdown timer
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        countdownPhase = -1
+        countdownTickCount = 0
     }
 }
 
 // MARK: - Preview
+
 #Preview {
     MainView()
         .environmentObject(WorkoutManager())
-        .environmentObject(ExtendedRuntimeManager())
+        .environmentObject(MeditationAlarmController())
 }
-

@@ -2,7 +2,11 @@
 //  WorkoutManager.swift
 //  monotation Watch App
 //
-//  Manages HealthKit workout sessions and heart rate tracking
+//  Manages HealthKit workout sessions for Extended Runtime Session activation
+//  and heart rate tracking during meditation.
+//
+//  IMPORTANT: HKWorkoutSession automatically activates Extended Runtime Session.
+//  This is the ONLY reliable way to get Extended Runtime Session on watchOS.
 //
 
 import Foundation
@@ -12,18 +16,28 @@ import Combine
 
 @MainActor
 class WorkoutManager: NSObject, ObservableObject {
+    
     // MARK: - Published Properties
+    
+    /// Current heart rate (bpm)
     @Published var heartRate: Double = 0
+    
+    /// Average heart rate during meditation (bpm)
     @Published var averageHeartRate: Double = 0
+    
+    /// Is workout session currently active
     @Published var isSessionActive: Bool = false
     
-    // Settings (with UserDefaults persistence)
+    // MARK: - Settings (with UserDefaults persistence)
+    
+    /// Selected meditation duration (seconds)
     @Published var selectedDuration: TimeInterval {
         didSet {
             UserDefaults.standard.set(selectedDuration, forKey: "selectedDuration")
         }
     }
     
+    /// Selected meditation pose
     @Published var selectedPose: MeditationPose {
         didSet {
             UserDefaults.standard.set(selectedPose.rawValue, forKey: "selectedPose")
@@ -31,6 +45,7 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Private Properties
+    
     private let healthStore = HKHealthStore()
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
@@ -40,6 +55,7 @@ class WorkoutManager: NSObject, ObservableObject {
     private var sessionEndDate: Date?
     
     // MARK: - Initialization
+    
     override init() {
         // Load settings from UserDefaults
         let savedDuration = UserDefaults.standard.double(forKey: "selectedDuration")
@@ -56,6 +72,7 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Request Authorization
+    
     func requestAuthorization() async throws {
         let typesToShare: Set = [
             HKQuantityType.workoutType(),
@@ -72,11 +89,14 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Start Workout Session
+    
+    /// Start workout session to activate Extended Runtime Session
+    /// This is the ONLY reliable way to get Extended Runtime Session on watchOS
     func startWorkout() async throws {
         // Request authorization if needed
         try await requestAuthorization()
         
-        // Configure workout
+        // Configure workout for meditation
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = .mindAndBody
         configuration.locationType = .indoor
@@ -89,7 +109,7 @@ class WorkoutManager: NSObject, ObservableObject {
         
         builder = session?.associatedWorkoutBuilder()
         
-        // Set data source
+        // Set data source for heart rate tracking
         builder?.dataSource = HKLiveWorkoutDataSource(
             healthStore: healthStore,
             workoutConfiguration: configuration
@@ -112,6 +132,8 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - End Workout Session
+    
+    /// End workout session (stops Extended Runtime Session)
     func endWorkout() {
         Task {
             sessionEndDate = Date()
@@ -124,6 +146,8 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Finish and Save Workout
+    
+    /// Finish workout and save to HealthKit
     func finishWorkout() async {
         guard let builder = builder, session != nil else { return }
         
@@ -147,6 +171,7 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Save Mindful Session
+    
     private func saveMindfulSession() async throws {
         guard let start = sessionStartDate, let end = sessionEndDate else { return }
         
@@ -163,6 +188,7 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Reset Session
+    
     private func resetSession() {
         session = nil
         builder = nil
@@ -174,6 +200,7 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     // MARK: - Calculate Average Heart Rate
+    
     private func calculateAverageHeartRate() {
         guard !heartRateValues.isEmpty else { return }
         let sum = heartRateValues.reduce(0, +)
@@ -182,7 +209,9 @@ class WorkoutManager: NSObject, ObservableObject {
 }
 
 // MARK: - HKWorkoutSessionDelegate
+
 extension WorkoutManager: HKWorkoutSessionDelegate {
+    
     nonisolated func workoutSession(
         _ workoutSession: HKWorkoutSession,
         didChangeTo toState: HKWorkoutSessionState,
@@ -211,7 +240,9 @@ extension WorkoutManager: HKWorkoutSessionDelegate {
 }
 
 // MARK: - HKLiveWorkoutBuilderDelegate
+
 extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
+    
     nonisolated func workoutBuilder(
         _ workoutBuilder: HKLiveWorkoutBuilder,
         didCollectDataOf collectedTypes: Set<HKSampleType>
@@ -236,4 +267,3 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
         // Handle workout events if needed
     }
 }
-

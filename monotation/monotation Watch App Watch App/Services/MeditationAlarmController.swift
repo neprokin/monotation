@@ -25,7 +25,7 @@ final class MeditationAlarmController: NSObject, ObservableObject {
     @Published private(set) var scheduledEndDate: Date?
     
     /// Was alarm stopped by user via system UI "Stop" button?
-    /// If true, user already acknowledged completion via system UI
+    /// If true, user already acknowledged completion via system UI (Вариант A)
     @Published private(set) var wasStoppedBySystem: Bool = false
     
     // MARK: - Private
@@ -88,7 +88,6 @@ final class MeditationAlarmController: NSObject, ObservableObject {
     /// Check for persisted alarm on app launch (crash recovery)
     /// NOTE: On app launch, meditation is not active, so persisted alarm is not needed.
     /// Clear it to avoid conflicts with active sessions (e.g., HKWorkoutSession).
-    /// Persisted alarm is only useful during active meditation for crash recovery.
     func checkForPersistedAlarm() {
         guard let endDate = UserDefaults.standard.object(forKey: endDateKey) as? Date else {
             print("📋 [Alarm] No persisted alarm found")
@@ -163,7 +162,7 @@ extension MeditationAlarmController: WKExtendedRuntimeSessionDelegate {
         // Log specific reasons
         switch reason {
         case .none:
-            print("   → No specific reason")
+            print("   → No specific reason (user stopped)")
         case .sessionInProgress:
             print("   → Another session already in progress")
         case .error:
@@ -186,10 +185,7 @@ extension MeditationAlarmController: WKExtendedRuntimeSessionDelegate {
                 
                 // Check if user stopped alarm via system UI "Stop" button
                 // .none usually means user explicitly stopped (most common when user taps "Stop")
-                // .resignedFrontmost means app moved to background (may happen when user opens app)
-                // .suppressedBySystem is system-initiated (not user action)
-                // .expired means session expired (not user action)
-                // .error means error occurred (not user action)
+                // Other reasons are system-initiated (not user action)
                 let userStopped = (reason == .none)
                 print("👆 [Alarm] Session invalidated - reason: \(reason.rawValue), userStopped: \(userStopped)")
                 
