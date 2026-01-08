@@ -240,42 +240,45 @@ struct TimerView: View {
         
         // Use Timer instead of DispatchQueue.main.asyncAfter (works in background)
         var tickCount = 0
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
-            
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
             tickCount += 1
             
             if tickCount == 1 {
                 // Phase 1: "3" (1 second, 33% fill)
-                withAnimation {
-                    self.countdownPhase = 1
-                    self.countdownProgress = 0.33
+                Task { @MainActor in
+                    withAnimation {
+                        countdownPhase = 1
+                        countdownProgress = 0.33
+                    }
                 }
             } else if tickCount == 2 {
                 // Phase 2: "2" (2 seconds, 66% fill)
-                withAnimation {
-                    self.countdownPhase = 2
-                    self.countdownProgress = 0.66
+                Task { @MainActor in
+                    withAnimation {
+                        countdownPhase = 2
+                        countdownProgress = 0.66
+                    }
                 }
             } else if tickCount == 3 {
                 // Phase 3: "1" (3 seconds, 100% fill)
-                withAnimation {
-                    self.countdownPhase = 3
-                    self.countdownProgress = 1.0
+                Task { @MainActor in
+                    withAnimation {
+                        countdownPhase = 3
+                        countdownProgress = 1.0
+                    }
                 }
             } else if tickCount >= 4 {
                 // Complete (4 seconds): start timer
                 timer.invalidate()
-                self.countdownTimer = nil
+                countdownTimer = nil
                 
-                self.countdownPhase = -1
-                self.countdownProgress = 0.0
-                
-                print("⏱️ Starting timer after countdown")
-                self.viewModel.startTimerAfterCountdown()
+                Task { @MainActor in
+                    countdownPhase = -1
+                    countdownProgress = 0.0
+                    
+                    print("⏱️ Starting timer after countdown")
+                    viewModel.startTimerAfterCountdown()
+                }
             }
         }
         
