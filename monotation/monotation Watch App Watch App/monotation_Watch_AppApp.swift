@@ -15,7 +15,7 @@ struct monotation_Watch_App: App {
     @StateObject private var runtimeManager = ExtendedRuntimeManager()
     
     /// Notification delegate - allows notifications to show even when app is active
-    @StateObject private var notificationDelegate = NotificationDelegate()
+    private let notificationDelegate = NotificationDelegate()
     
     init() {
         // Request notification permission for meditation completion alerts
@@ -52,7 +52,7 @@ struct monotation_Watch_App: App {
 // This allows notifications to be shown even when the app is in foreground (active)
 // Without this, Local Notifications are suppressed when the app is running
 
-class NotificationDelegate: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
+class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     
     /// Called when notification is about to be presented while app is in foreground
     /// Return presentation options to show banner, play sound, and trigger haptic
