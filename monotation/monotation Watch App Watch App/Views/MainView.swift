@@ -44,17 +44,9 @@ struct MainView: View {
                     .font(.system(size: 40))
                 
                 // Title
-                VStack(spacing: 2) {
-                    Text("Медитация")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(.primary)
-                    
-                    // Version indicator (temporary - to verify new version)
-                    Text("✨ NEW")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.green)
-                        .opacity(0.8)
-                }
+                Text("Медитация")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.primary)
                 
                 Spacer()
             }
