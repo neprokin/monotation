@@ -1,14 +1,153 @@
-# 🏗️ Архитектура текущего решения (Smart Alarm)
+# 🏗️ Архитектура проекта
 
 ## 📋 Цель документа
 
-Этот документ описывает **полную архитектуру** текущего рабочего решения с Smart Alarm для Apple Watch. Используется как референс при переписывании с нуля.
+Этот документ описывает **полную архитектуру проекта monotation**, включая:
+- Общую архитектуру (MVVM, структура проекта, iOS App, Watch App)
+- Smart Alarm решение для Apple Watch (детальное описание)
 
 **ВАЖНО**: Все описанные компоненты и их взаимодействие должны быть точно воспроизведены в новой версии!
 
 ---
 
-## 🎯 Общая архитектура
+## 📐 Общая архитектура проекта
+
+### Архитектурный паттерн: MVVM
+
+**iOS App**:
+```
+Views (SwiftUI) → ViewModels (ObservableObject) → Services → Backend/Supabase
+```
+
+**Watch App**:
+```
+Views (SwiftUI) → Services (MeditationAlarmController, WorkoutManager) → HealthKit/WatchConnectivity
+```
+
+### Структура проекта
+
+```
+monotation/
+├── monotation/                    # iOS App
+│   ├── App/                       # Entry point
+│   │   └── monotationApp.swift    # @main
+│   ├── Views/                     # SwiftUI UI
+│   │   ├── Timer/
+│   │   ├── Meditation/
+│   │   └── History/
+│   ├── ViewModels/                # Business logic
+│   │   ├── TimerViewModel.swift
+│   │   ├── MeditationFormViewModel.swift
+│   │   └── HistoryViewModel.swift
+│   ├── Models/                    # Data models
+│   │   ├── Meditation.swift
+│   │   ├── MeditationPose.swift
+│   │   └── MeditationPlace.swift
+│   ├── Services/                  # Backend & System
+│   │   ├── SupabaseService.swift  # CRUD с Supabase
+│   │   ├── AuthService.swift      # Apple Sign In (опционально)
+│   │   ├── NotificationService.swift  # Time-sensitive уведомления
+│   │   └── ConnectivityManager.swift  # Watch ↔ iPhone sync
+│   └── Config/                    # Supabase keys (в .gitignore)
+│
+└── monotation Watch App Watch App/  # watchOS App
+    ├── Views/
+    │   ├── MainView.swift         # Главный экран + countdown
+    │   ├── ActiveMeditationView.swift  # Активная медитация
+    │   ├── CompletionView.swift   # Экран завершения
+    │   └── WatchSettingsView.swift
+    ├── Services/
+    │   ├── MeditationAlarmController.swift  # Smart Alarm (WKExtendedRuntimeSession)
+    │   ├── WorkoutManager.swift   # HKWorkoutSession для HR tracking
+    │   └── ConnectivityManager.swift  # Watch ↔ iPhone sync
+    └── Info.plist
+```
+
+### Data Flow
+
+**iOS App (MVVM)**:
+```
+User Action → View → ViewModel → Service → Supabase
+                ↑         ↓
+            @Published  Update
+```
+
+**Watch App**:
+```
+User Action → View → Service (AlarmController/WorkoutManager) → HealthKit/WatchConnectivity
+```
+
+### Ключевые компоненты
+
+**iOS App**:
+- **Views**: SwiftUI декларативный UI
+  - `TimerView` - главный экран с таймером
+  - `MeditationFormView` - форма сохранения медитации
+  - `HistoryView` - история медитаций
+- **ViewModels**: ObservableObject с @Published properties, бизнес-логика для UI
+  - `TimerViewModel` - логика таймера, background tasks
+  - `MeditationFormViewModel` - валидация и сохранение
+  - `HistoryViewModel` - загрузка истории из Supabase
+- **Services**: Actor/Class для backend и system интеграции
+  - `SupabaseService` - CRUD операции с Supabase
+  - `AuthService` - Apple Sign In (опционально)
+  - `NotificationService` - Time-sensitive уведомления (fallback)
+  - `ConnectivityManager` - синхронизация с Watch App
+- **Models**: Простые Swift structs (Codable, Identifiable)
+  - `Meditation` - основная модель медитации
+  - `MeditationPose`, `MeditationPlace` - enums
+
+**Watch App**:
+- **Views**: SwiftUI декларативный UI
+  - `MainView` - главный экран + countdown
+  - `ActiveMeditationView` - активная медитация с таймером
+  - `CompletionView` - экран завершения
+  - `WatchSettingsView` - настройки
+- **Services**: 
+  - `MeditationAlarmController` - Smart Alarm управление (WKExtendedRuntimeSession)
+  - `WorkoutManager` - HKWorkoutSession для HR tracking и Extended Runtime
+  - `ConnectivityManager` - синхронизация с iPhone App
+
+### Синхронизация Watch ↔ iPhone
+
+**WatchConnectivity (WCSession)**:
+- Watch App отправляет данные медитации в iPhone App
+- iPhone App сохраняет в Supabase и HealthKit
+- Работает только на реальных устройствах (не в симуляторе)
+
+**Поток синхронизации**:
+```
+Watch App (CompletionView)
+    ↓
+ConnectivityManager.sendMeditation()
+    ↓
+WCSession.sendMessage()
+    ↓
+iPhone App (ConnectivityManager.receiveMessage())
+    ↓
+SupabaseService.insertMeditation()
+    ↓
+HealthKit сохранение
+```
+
+### Backend и хранение данных
+
+**Текущее решение (временное)**:
+- **Supabase** (PostgreSQL) - для разработки и тестирования
+- **HealthKit** - для Mindful Minutes и Workout данных
+- **UserDefaults** - для persisted Smart Alarm (endDate)
+
+**Планируемое решение**:
+- **CloudKit** - после активации Apple Developer Account
+- Автоматическая синхронизация через iCloud
+- Встроенная авторизация через iCloud
+
+📖 **Детали настройки**: [SUPABASE_SETUP.md](SUPABASE_SETUP.md)  
+📖 **План миграции**: [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md)
+
+---
+
+## 🎯 Smart Alarm архитектура (Watch App)
 
 ### Три контура гарантии
 
@@ -513,6 +652,17 @@ CompletionView (автоматически)
 
 ---
 
+---
+
+## 📚 См. также
+
+- [README.md](../README.md) - Главная документация проекта
+- [SUPABASE_SETUP.md](SUPABASE_SETUP.md) - Настройка Supabase backend
+- [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md) - План миграции на CloudKit
+- [UX_UI_DOCUMENTATION.md](UX_UI_DOCUMENTATION.md) - Референс UX/UI Watch App
+
+---
+
 **Дата создания**: 2026-01-08  
-**Версия**: 1.0  
-**Статус**: ✅ Полная документация текущей архитектуры
+**Версия**: 2.0  
+**Статус**: ✅ Полная документация архитектуры проекта (общая + Smart Alarm)

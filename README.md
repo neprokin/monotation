@@ -16,13 +16,13 @@
 
 ---
 
-## ✨ Функционал (MVP v1.0)
+## ✨ Функционал
 
 ### 📱 iOS App (✅ протестировано)
 - 🕐 **Таймер медитации** - выбор времени с обратным отсчетом
 - 💾 **Сохранение записей** - дата, время, длительность, поза, место, заметка
 - 📚 **История медитаций** - хронологический список всех практик
-- 🔐 **Apple Sign In** - безопасная аутентификация
+- 🔐 **Apple Sign In** - опционально (для продакшена, см. [docs/PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md))
 
 ### ⌚️ watchOS App (✅ протестировано на реальных устройствах)
 - 🕐 **Таймер медитации** - выбор длительности, обратный отсчет
@@ -81,7 +81,7 @@
    ```
 
 3. **Настрой Supabase:**
-   - 📖 **Подробная инструкция**: [SUPABASE_SETUP.md](SUPABASE_SETUP.md)
+   - 📖 **Подробная инструкция**: [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)
    - Кратко:
      - Создай проект на [supabase.com](https://supabase.com)
      - В Xcode: создай `Config.swift` в папке `Config/` со следующим содержимым:
@@ -93,7 +93,7 @@
        }
        ```
      - Замени `YOUR_SUPABASE_URL_HERE` и `YOUR_SUPABASE_ANON_KEY_HERE` на реальные ключи
-     - Выполни SQL из `SUPABASE_SETUP.md` для создания таблицы
+     - Выполни SQL из `docs/SUPABASE_SETUP.md` для создания таблицы
 
 4. **Настрой Signing:**
    - В Xcode: Target → Signing & Capabilities
@@ -109,35 +109,35 @@
 
 ```
 monotation/
-├── App/                           # Entry point
-│   └── monotationApp.swift        # @main
-├── Views/                         # SwiftUI UI
-│   ├── Timer/TimerView.swift      # Главный экран с таймером
-│   ├── Meditation/MeditationFormView.swift  # Форма сохранения
-│   └── History/                   # История медитаций
-│       ├── HistoryView.swift
-│       ├── MeditationCard.swift
-│       └── MeditationDetailView.swift
-├── ViewModels/                    # Business logic
-│   ├── TimerViewModel.swift
-│   ├── MeditationFormViewModel.swift
-│   └── HistoryViewModel.swift
-├── Models/                        # Data models
-│   ├── Meditation.swift
-│   ├── MeditationPose.swift
-│   └── MeditationPlace.swift
-├── Services/                      # Backend & System
-│   ├── SupabaseService.swift      # CRUD с Supabase
-│   ├── AuthService.swift          # Apple Sign In (заготовка)
-│   └── NotificationService.swift  # Локальные уведомления
-├── Extensions/                    # Swift extensions
-│   ├── Date+Extensions.swift
-│   └── TimeInterval+Extensions.swift
-├── Config/                        # Configuration (в .gitignore)
-│   └── Config.swift               # Supabase ключи
-└── Resources/                     # Assets, colors
-    └── Assets.xcassets
+├── monotation/                    # iOS App
+│   ├── App/                       # Entry point
+│   ├── Views/                     # SwiftUI UI
+│   │   ├── Timer/
+│   │   ├── Meditation/
+│   │   └── History/
+│   ├── ViewModels/                # Business logic
+│   ├── Models/                    # Data models
+│   ├── Services/                  # Backend & System
+│   │   ├── SupabaseService.swift
+│   │   ├── AuthService.swift
+│   │   ├── NotificationService.swift
+│   │   └── ConnectivityManager.swift
+│   └── Config/                    # Supabase keys (в .gitignore)
+│
+└── monotation Watch App Watch App/  # watchOS App
+    ├── Views/
+    │   ├── MainView.swift
+    │   ├── ActiveMeditationView.swift
+    │   ├── CompletionView.swift
+    │   └── WatchSettingsView.swift
+    ├── Services/
+    │   ├── MeditationAlarmController.swift  # Smart Alarm
+    │   ├── WorkoutManager.swift             # HealthKit
+    │   └── ConnectivityManager.swift        # Watch ↔ iPhone
+    └── Info.plist
 ```
+
+📖 **Детальная архитектура**: [docs/ARCHITECTURE_CURRENT.md](docs/ARCHITECTURE_CURRENT.md)
 
 ---
 
@@ -149,12 +149,14 @@ monotation/
 - **ViewModels**: ObservableObject (@Published properties, business logic)
 - **Services**: Actor/Class для backend и system интеграции
 
-### Data Flow
+### Data Flow (iOS App)
 ```
 User Action → View → ViewModel → Service → Supabase
                 ↑         ↓
             @Published  Update
 ```
+
+📖 **Детальная архитектура проекта**: [docs/ARCHITECTURE_CURRENT.md](docs/ARCHITECTURE_CURRENT.md)
 
 ---
 
@@ -162,12 +164,27 @@ User Action → View → ViewModel → Service → Supabase
 
 ### Workflow: Cursor + Xcode
 
-1. **AI (Cursor)** пишет код и создает файлы
-2. **Разработчик (Xcode)** компилирует и тестирует (⌘+R)
-3. **Итерация**: фидбек → исправления → проверка
-4. **Git commit** после каждой работающей фичи
+**Hybrid Approach**: Cursor для написания кода + Xcode для тестирования
 
-Подробнее в [WORKFLOW.md](WORKFLOW.md)
+**Роли инструментов:**
+
+**Cursor (AI Assistant):**
+- ✅ Создаю новые `.swift` файлы
+- ✅ Пишу SwiftUI Views, ViewModels, Models, Services
+- ✅ Рефакторю код, исправляю ошибки
+- ✅ Редактирую `Info.plist`, `Config.swift`
+
+**Xcode (Твои действия):**
+- ✅ **Build & Run** (`⌘+R`) - запуск приложения
+- ✅ **SwiftUI Previews** - живой просмотр компонентов
+- ✅ **Debugging** - брейкпоинты, консоль
+- ✅ **Signing & Capabilities** - настройка сертификатов
+
+**Типичный цикл:**
+1. AI создает код в Cursor
+2. Ты тестируешь в Xcode (`⌘+R`)
+3. Фидбек → исправления → проверка
+4. Git commit после каждой работающей фичи
 
 ### Git workflow
 
@@ -204,44 +221,75 @@ git commit -m "docs: update README with setup instructions"
 git commit -m "refactor: extract MeditationDetailView to separate file"
 ```
 
+### Горячие клавиши Xcode
+
+```
+⌘ + R          Build & Run
+⌘ + .          Stop
+⌘ + B          Build only
+⌘ + Shift + K  Clean Build Folder
+⌘ + Shift + Y  Show/Hide Console
+⌘ + Shift + O  Open Quickly (найти файл)
+```
+
+### Troubleshooting
+
+**Xcode не видит новые файлы:**
+- Перетащи файл в Xcode Project Navigator вручную
+- Или: File → Add Files to "monotation"
+
+**Preview не работает:**
+- ⌘ + Option + P (Resume Preview)
+- Product → Clean Build Folder (⌘ + Shift + K)
+
+**Build ошибка:**
+- Прочитай ошибку в Issue Navigator (⌘ + 5)
+- Скопируй ошибку в Cursor для исправления
+
 ---
 
 ## 📖 Документация
 
-- [WORKFLOW.md](WORKFLOW.md) - Development workflow (Cursor + Xcode)
-- [SUPABASE_SETUP.md](SUPABASE_SETUP.md) - Настройка Supabase backend
-- [.cursor/notepads/](.cursor/notepads/) - Техническая документация для AI
+### Основная документация
+- [docs/ARCHITECTURE_CURRENT.md](docs/ARCHITECTURE_CURRENT.md) - Полная архитектура проекта (MVVM, iOS App, Watch App, Smart Alarm)
+- [docs/UX_UI_DOCUMENTATION.md](docs/UX_UI_DOCUMENTATION.md) - Референс UX/UI Watch App (для будущих изменений)
+- [docs/HAPTIC_COMPLETION_ISSUE.md](docs/HAPTIC_COMPLETION_ISSUE.md) - История решения проблемы haptic (архив)
+
+### Настройка и разработка
+- [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) - Настройка Supabase backend (временное решение)
+- [docs/PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md) - Подготовка к релизу и миграция на CloudKit
+
+### Референс
+- [docs/reference/REFERENCE_APPLE_HEALTH_ADA.md](docs/reference/REFERENCE_APPLE_HEALTH_ADA.md) - Референс Apple Health и ADA критерии
+
+📚 **Полный индекс документации**: [docs/README.md](docs/README.md)
 
 ---
 
 ## 🗺 Roadmap
 
-### ✅ v1.0 - MVP (Current) - 95% завершено
-
-**Завершено:**
-- [x] Документация и настройка
-- [x] Xcode проект с MVVM
-- [x] Supabase SDK интегрирован
-- [x] Models (Meditation, MeditationPose, MeditationPlace)
-- [x] Таймер медитации (выбор длительности, обратный отсчет, фоновый режим)
-- [x] Сохранение записей (форма с валидацией)
-- [x] История медитаций (группировка по датам, статистика, детальный просмотр)
-- [x] Supabase backend (SupabaseService, AuthService, NotificationService)
-- [x] Интеграция сохранения/загрузки с Supabase
-- [x] Монохромный дизайн (Light/Dark mode)
+### ✅ v1.0 - MVP - Завершено
+- [x] iOS App: Таймер, сохранение, история
+- [x] Supabase backend интеграция
+- [x] Монохромный дизайн
 - [x] Тестирование всех функций
 
-**Опционально:**
-- [ ] Apple Sign In (AuthView) - для продакшена
+### ✅ v2.0 - Smart Alarm Implementation - Завершено
+- [x] Watch App с Smart Alarm архитектурой
+- [x] Гарантированные haptic уведомления в AOD режиме
+- [x] Мониторинг пульса (HKWorkoutSession)
+- [x] Синхронизация Watch ↔ iPhone
+- [x] Fallback уведомления на iPhone
+- [x] Полная документация архитектуры и UX/UI
 
-### 📋 v1.1 - Polish & Release
+### 📋 v2.1 - Polish & Release
 **Цель**: Подготовка к App Store
-- [ ] Apple Sign In (AuthView)
-- [ ] Production Supabase setup (RLS policies)
+- [ ] Apple Sign In (опционально)
+- [ ] Миграция на CloudKit (рекомендуется)
 - [ ] App Store Connect setup
 - [ ] TestFlight бета-тестирование
 
-### 📋 v1.2 - Улучшения UX
+### 📋 v3.0 - Улучшения UX
 **Цель**: Расширенная функциональность
 - [ ] Редактирование/удаление медитаций
 - [ ] Базовая статистика (стрики, графики)
@@ -249,7 +297,7 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 - [ ] Настройки (Settings screen)
 - [ ] iPad support
 
-### 🚀 v2.0 - AI Integration
+### 🚀 v4.0 - AI Integration
 **Цель**: Интеллектуальный анализ
 - [ ] AI-анализ паттернов медитации (markdown → insights)
 - [ ] Персональные рекомендации
@@ -260,16 +308,23 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 
 ## 🎯 Текущий статус проекта
 
-**Фаза**: MVP v1.0 (95% Complete) ✅
+**Фаза**: v2.0 - Smart Alarm Implementation ✅ Complete
 
 **Что работает:**
-- ✅ Таймер медитации (с выбором времени, обратным отсчетом)
-- ✅ Форма сохранения (поза, место, заметка)
-- ✅ История медитаций (группировка по датам, статистика)
-- ✅ Детальный просмотр медитации
-- ✅ Supabase backend (сохранение/загрузка данных)
-- ✅ Локальные уведомления
-- ✅ Монохромный дизайн (Light/Dark mode)
+- ✅ **Watch App**: Полностью переписан с Smart Alarm архитектурой
+- ✅ **iPhone App**: Очищен от legacy кода, все функции работают
+- ✅ **Smart Alarm**: Гарантированные haptic уведомления в AOD режиме
+- ✅ **Вариант A**: Автоматический CompletionView при системном "Остановить"
+- ✅ **Countdown**: Работает на обоих платформах (4 секунды: 🧘 → 3 → 2 → 1)
+- ✅ **Синхронизация**: Watch ↔ iPhone через WatchConnectivity
+- ✅ **Fallback уведомления**: Time-sensitive на iPhone
+- ✅ **Background execution**: Работает на обоих платформах
+
+**Технические детали:**
+- ✅ Smart Alarm планируется ДО workout session (критично!)
+- ✅ WKBackgroundModes: только `alarm` (не `mindfulness`)
+- ✅ Timer с RunLoop.main.add(..., forMode: .common)
+- ✅ Полная документация архитектуры и UX/UI
 
 **В режиме разработки:**
 - ⚠️ Используется `temp-user-id` (для тестирования без авторизации)
@@ -277,9 +332,11 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 - ⚠️ Временные RLS policies в Supabase
 
 **Следующие шаги:**
-1. Добавить Apple Sign In (опционально для v1.0)
-2. Настроить production Supabase
-3. Подготовить к релизу
+1. Миграция на CloudKit (рекомендуется) или настройка production Supabase
+2. Apple Sign In (опционально)
+3. Подготовка к релизу в App Store
+
+📖 **План релиза**: [docs/PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md)
 
 ---
 
@@ -308,6 +365,7 @@ MIT License - см. [LICENSE](LICENSE) для деталей.
 
 ---
 
-**Последнее обновление**: 29 декабря 2025  
+**Последнее обновление**: 8 января 2026  
+**Версия**: 2.0 (Smart Alarm Implementation)  
 **GitHub**: [github.com/neprokin/monotation](https://github.com/neprokin/monotation)
 
