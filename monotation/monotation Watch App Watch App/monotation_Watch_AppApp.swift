@@ -13,6 +13,7 @@ struct monotation_Watch_App: App {
     @StateObject private var workoutManager = WorkoutManager()
     @StateObject private var connectivityManager = ConnectivityManager.shared
     @StateObject private var runtimeManager = ExtendedRuntimeManager()
+    @StateObject private var alarmController = MeditationAlarmController()
     
     /// Notification delegate - allows notifications to show even when app is active
     private let notificationDelegate = NotificationDelegate()
@@ -28,9 +29,13 @@ struct monotation_Watch_App: App {
                 .environmentObject(workoutManager)
                 .environmentObject(connectivityManager)
                 .environmentObject(runtimeManager)
+                .environmentObject(alarmController)
                 .onAppear {
                     // Set delegate to allow notifications when app is in foreground
                     UNUserNotificationCenter.current().delegate = notificationDelegate
+                    
+                    // Check for persisted alarm (crash recovery)
+                    alarmController.checkForPersistedAlarm()
                 }
         }
     }

@@ -11,15 +11,17 @@ import WatchKit
 
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
-    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager  // Получаем из App через environment
+    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager
+    @EnvironmentObject var alarmController: MeditationAlarmController  // Smart Alarm - ГЛАВНАЯ гарантия
     @Environment(\.dismiss) private var dismiss
     
     @State private var timeRemaining: TimeInterval = 0
     @State private var timer: Timer?
-    @State private var completionSignalTimer: Timer?  // NEW: для повторяющихся вибраций
+    @State private var completionSignalTimer: Timer?  // Для повторяющихся вибраций (best-effort)
     @State private var isPaused: Bool = false
-    @State private var isWaitingForAcknowledgment: Bool = false  // NEW: состояние ожидания подтверждения
+    @State private var isWaitingForAcknowledgment: Bool = false
     @State private var startTime: Date?
+    @State private var endDate: Date?  // Время завершения медитации
     @State private var showCompletion: Bool = false
     
     private var duration: TimeInterval {
@@ -128,25 +130,37 @@ struct ActiveMeditationView: View {
     
     private func startTimer() {
         startTime = Date()
+        endDate = Date().addingTimeInterval(timeRemaining)
         
         print("🎯 [ActiveMeditation] Starting meditation timer")
-        print("📊 [ActiveMeditation] Runtime session active: \(runtimeManager.isActive)")
+        print("📊 [ActiveMeditation] End date: \(endDate!)")
         
         // NOTE: Workout session already started in MainView during countdown
-        // This automatically enables Extended Runtime Session, so Timer works in background
+        // This is for HR tracking, NOT for alarm guarantee
         
-        // Haptic feedback: подтверждение старта медитации (Контур 2 - когда app активно)
+        // Haptic feedback: подтверждение старта медитации
         print("📳 [ActiveMeditation] Playing START haptic")
         WKInterfaceDevice.current().play(.start)
         
-        // CRITICAL: Контур 1 - планируем уведомление ЗАРАНЕЕ на время T_end
-        // Это гарантирует вибрацию в AOD/wrist-down, даже если приложение в background
+        // ========================================
+        // КОНТУР 1 (ГЛАВНЫЙ): Smart Alarm
+        // Это СИСТЕМНЫЙ механизм "будильника"
+        // Гарантированно работает в AOD/wrist-down
+        // ========================================
+        alarmController.scheduleAlarm(at: endDate!)
+        
+        // ========================================
+        // КОНТУР 2 (FALLBACK): Local Notifications
+        // На случай если Smart Alarm не сработает
+        // ========================================
         scheduleEndNotification(after: timeRemaining)
         
-        // Use Timer with RunLoop.main and .common mode (works in background)
-        // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
-        // This ensures timer works even when screen is locked
-        let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
+        // ========================================
+        // КОНТУР 3 (ВИЗУАЛЬНЫЙ): Timer для UI
+        // Только для отображения обратного отсчёта
+        // НЕ для гарантии уведомления!
+        // ========================================
+        let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in
                 if self.timeRemaining > 0 {
                     self.timeRemaining -= 1
@@ -162,25 +176,29 @@ struct ActiveMeditationView: View {
     
     private func pauseTimer() {
         timer?.invalidate()
-        timer = nil  // NEW: clear reference to prevent memory leak
+        timer = nil
         isPaused = true
         
-        // Отменяем запланированное уведомление при паузе
+        // Отменяем Smart Alarm и уведомления при паузе
+        alarmController.cancelAlarm()
         cancelEndNotification()
-        print("⏸️ [ActiveMeditation] Paused - cancelled end notification")
+        print("⏸️ [ActiveMeditation] Paused - cancelled alarm and notifications")
     }
     
     private func resumeTimer() {
         isPaused = false
         
-        // Перепланируем уведомление на новое время T_end
-        scheduleEndNotification(after: timeRemaining)
-        print("▶️ [ActiveMeditation] Resumed - rescheduled end notification for \(timeRemaining)s")
+        // Пересчитываем новое время завершения
+        let newEndDate = Date().addingTimeInterval(timeRemaining)
+        endDate = newEndDate
         
-        // Use Timer with RunLoop.main and .common mode (works in background)
-        // CRITICAL: Use Task { @MainActor } instead of DispatchQueue.main.async
-        // This ensures timer works even when screen is locked
-        let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { timer in
+        // Перепланируем Smart Alarm и уведомления
+        alarmController.rescheduleAlarm(at: newEndDate)
+        scheduleEndNotification(after: timeRemaining)
+        print("▶️ [ActiveMeditation] Resumed - rescheduled for \(newEndDate)")
+        
+        // Перезапускаем визуальный Timer
+        let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in
                 if self.timeRemaining > 0 {
                     self.timeRemaining -= 1
@@ -196,14 +214,15 @@ struct ActiveMeditationView: View {
     
     private func stopTimer() {
         timer?.invalidate()
-        completionSignalTimer?.invalidate()  // NEW: останавливаем вибрации
+        completionSignalTimer?.invalidate()
         completionSignalTimer = nil
-        isWaitingForAcknowledgment = false  // NEW: сбрасываем состояние
+        isWaitingForAcknowledgment = false
         workoutManager.endWorkout()
         
-        // Отменяем запланированное уведомление при досрочном завершении
+        // Отменяем Smart Alarm и уведомления при досрочном завершении
+        alarmController.cancelAlarm()
         cancelEndNotification()
-        print("⏹️ [ActiveMeditation] Stopped early - cancelled end notification")
+        print("⏹️ [ActiveMeditation] Stopped early - cancelled alarm and notifications")
         
         // Show completion if at least 3 seconds passed
         if duration - timeRemaining >= 3 {
@@ -218,19 +237,17 @@ struct ActiveMeditationView: View {
         workoutManager.endWorkout()
         
         print("⏰ [ActiveMeditation] Timer COMPLETED")
-        print("📊 [ActiveMeditation] Runtime session active: \(runtimeManager.isActive)")
+        print("📊 [ActiveMeditation] Alarm scheduled: \(alarmController.isAlarmScheduled)")
         
-        // IMPORTANT: НЕ отменяем уведомление здесь!
-        // Пусть системное уведомление придёт - это гарантия в AOD режиме.
-        // Если приложение активно (wrist-up), пользователь увидит и haptic, и уведомление.
-        // Лучше дубль, чем пропуск!
-        // cancelEndNotification()  // <-- Убрано специально
+        // НЕ отменяем Smart Alarm и уведомления!
+        // Smart Alarm должен сработать и дать системный haptic
+        // Уведомления - fallback если Smart Alarm не сработает
         
-        // NEW: Переходим в состояние ожидания подтверждения
+        // Переходим в состояние ожидания подтверждения
         isWaitingForAcknowledgment = true
         
-        // NEW: Контур 2 - когда приложение активно, играем haptic напрямую
-        // Если приложение в background, системное уведомление должно прийти
+        // Best-effort: локальный haptic на случай если приложение активно
+        // Smart Alarm даст системный haptic независимо от этого
         startCompletionSignals()
     }
     
@@ -330,16 +347,20 @@ struct ActiveMeditationView: View {
         WKInterfaceDevice.current().play(.notification)
     }
     
-    // NEW: Подтвердить завершение медитации
+    // Подтвердить завершение медитации
     private func acknowledgeMeditationCompletion() {
-        print("✅ [ActiveMeditation] User acknowledged completion - stopping signals")
+        print("✅ [ActiveMeditation] User acknowledged completion - stopping all signals")
         
-        // Останавливаем вибрации (Контур 2)
+        // Останавливаем ВСЁ:
+        // 1. Smart Alarm (системный haptic)
+        alarmController.cancelAlarm()
+        
+        // 2. Local notifications (fallback)
+        cancelEndNotification()
+        
+        // 3. Локальный haptic timer (best-effort)
         completionSignalTimer?.invalidate()
         completionSignalTimer = nil
-        
-        // Отменяем pending уведомление если оно ещё не доставлено (Контур 1)
-        cancelEndNotification()
         
         // Показываем форму завершения
         isWaitingForAcknowledgment = false
@@ -350,11 +371,15 @@ struct ActiveMeditationView: View {
         print("🧹 [ActiveMeditation] Cleanup")
         timer?.invalidate()
         timer = nil
-        completionSignalTimer?.invalidate()  // очистка таймера вибраций (Контур 2)
+        completionSignalTimer?.invalidate()
         completionSignalTimer = nil
-        cancelEndNotification()  // отмена pending уведомления (Контур 1)
-        // NOTE: Workout session will be ended by WorkoutManager when meditation completes
-        // No need to stop Extended Runtime Session - it's managed by Workout Session
+        
+        // НЕ отменяем Smart Alarm здесь!
+        // Alarm должен продолжать работать если пользователь не подтвердил завершение
+        // Он будет отменён только в acknowledgeMeditationCompletion()
+        
+        // Но уведомления отменяем - они были fallback
+        cancelEndNotification()
     }
     
     // MARK: - Helpers
@@ -372,6 +397,7 @@ struct ActiveMeditationView: View {
         ActiveMeditationView()
             .environmentObject(WorkoutManager())
             .environmentObject(ExtendedRuntimeManager())
+            .environmentObject(MeditationAlarmController())
     }
 }
 
