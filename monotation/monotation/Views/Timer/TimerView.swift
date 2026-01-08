@@ -14,6 +14,7 @@ struct TimerView: View {
     @State private var showSettings = false
     @State private var countdownPhase: Int = -1 // -1 = idle, 0 = "На старт!", 1-3 = countdown
     @State private var countdownProgress: Double = 0.0
+    @State private var countdownTimer: Timer?
     
     var body: some View {
         NavigationStack {
@@ -135,7 +136,14 @@ struct TimerView: View {
                 if case .idle = newState {
                     countdownPhase = -1
                     countdownProgress = 0.0
+                    countdownTimer?.invalidate()
+                    countdownTimer = nil
                 }
+            }
+            .onDisappear {
+                // Cleanup countdown timer
+                countdownTimer?.invalidate()
+                countdownTimer = nil
             }
         }
     }
@@ -214,48 +222,66 @@ struct TimerView: View {
     // MARK: - Countdown Logic
     
     private func startCountdown() {
+        // CRITICAL: Start background task IMMEDIATELY (before countdown)
+        // This ensures countdown works even when screen is locked
+        viewModel.beginBackgroundTaskForCountdown()
+        
+        // CRITICAL: Schedule notification IMMEDIATELY (countdownDuration + meditationDuration)
+        // This ensures notification fires even if app is killed during countdown
+        let countdownDuration: TimeInterval = 4.0
+        let totalDuration = countdownDuration + viewModel.selectedDuration
+        viewModel.scheduleNotificationForCountdown(totalDuration: totalDuration)
+        
         // Phase 0: "На старт!" (0 seconds, no fill)
         withAnimation {
             countdownPhase = 0
             countdownProgress = 0.0
         }
         
-        // Phase 1: "3" (1 second, 33% fill)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            withAnimation {
-                countdownPhase = 1
-                countdownProgress = 0.33
+        // Use Timer instead of DispatchQueue.main.asyncAfter (works in background)
+        var tickCount = 0
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
             }
-        }
-        
-        // Phase 2: "2" (2 seconds, 66% fill)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation {
-                countdownPhase = 2
-                countdownProgress = 0.66
-            }
-        }
-        
-        // Phase 3: "1" (3 seconds, 100% fill)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            withAnimation {
-                countdownPhase = 3
-                countdownProgress = 1.0
-            }
-        }
-        
-        // Complete (4 seconds): start timer
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-            countdownPhase = -1
-            countdownProgress = 0.0
             
-            print("⏱️ Starting timer after countdown")
-            viewModel.startTimerAfterCountdown()
+            tickCount += 1
             
-            // Force UI update
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                print("⏱️ Timer state: \(viewModel.timerState), isRunning: \(viewModel.isRunning)")
+            if tickCount == 1 {
+                // Phase 1: "3" (1 second, 33% fill)
+                withAnimation {
+                    self.countdownPhase = 1
+                    self.countdownProgress = 0.33
+                }
+            } else if tickCount == 2 {
+                // Phase 2: "2" (2 seconds, 66% fill)
+                withAnimation {
+                    self.countdownPhase = 2
+                    self.countdownProgress = 0.66
+                }
+            } else if tickCount == 3 {
+                // Phase 3: "1" (3 seconds, 100% fill)
+                withAnimation {
+                    self.countdownPhase = 3
+                    self.countdownProgress = 1.0
+                }
+            } else if tickCount >= 4 {
+                // Complete (4 seconds): start timer
+                timer.invalidate()
+                self.countdownTimer = nil
+                
+                self.countdownPhase = -1
+                self.countdownProgress = 0.0
+                
+                print("⏱️ Starting timer after countdown")
+                self.viewModel.startTimerAfterCountdown()
             }
+        }
+        
+        // Add timer to RunLoop with .common mode (works even when screen locked)
+        if let timer = countdownTimer {
+            RunLoop.main.add(timer, forMode: .common)
         }
     }
     

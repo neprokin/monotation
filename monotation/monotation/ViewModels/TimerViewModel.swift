@@ -60,6 +60,20 @@ class TimerViewModel: ObservableObject {
         timerState = .idle
     }
     
+    /// Begin background task for countdown (called immediately when countdown starts)
+    /// This ensures countdown works even when screen is locked
+    func beginBackgroundTaskForCountdown() {
+        // Only start if not already started
+        guard backgroundTaskID == .invalid else { return }
+        beginBackgroundTask()
+    }
+    
+    /// Schedule notification for countdown + meditation duration (called immediately when countdown starts)
+    /// This ensures notification fires even if app is killed during countdown
+    func scheduleNotificationForCountdown(totalDuration: TimeInterval) {
+        notificationService.scheduleTimerCompletionNotification(in: totalDuration)
+    }
+    
     func startTimerAfterCountdown() {
         startTime = Date()
         remainingTime = selectedDuration
@@ -68,10 +82,14 @@ class TimerViewModel: ObservableObject {
         // Haptic + sound confirmation of start
         hapticFeedback.playMeditationStart()
         
-        // Start background task to keep running in background
-        beginBackgroundTask()
+        // Background task should already be started in beginBackgroundTaskForCountdown()
+        // Only start if not already started (fallback)
+        if backgroundTaskID == .invalid {
+            beginBackgroundTask()
+        }
         
-        // Schedule notification for timer completion
+        // Notification should already be scheduled in scheduleNotificationForCountdown()
+        // Re-schedule with exact remaining time (more accurate)
         scheduleTimerNotification()
         
         // Start countdown
