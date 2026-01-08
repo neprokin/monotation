@@ -22,13 +22,13 @@ class TimerViewModel: ObservableObject {
     // MARK: - Private Properties
     
     private var timer: AnyCancellable?
-    private var completionSignalTimer: AnyCancellable?  // NEW: для повторяющихся сигналов
-    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid  // NEW: для работы в фоне
+    private var completionSignalTimer: AnyCancellable?  // For repeating completion signals
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid  // For background execution
     private var startTime: Date?
     private var endTime: Date?
     private var backgroundEnteredDate: Date?
     private let notificationService = NotificationService.shared
-    private let hapticFeedback = HapticFeedback.shared  // NEW: для тактильной обратной связи
+    private let hapticFeedback = HapticFeedback.shared  // For haptic feedback
     
     // MARK: - Initialization
     
@@ -38,9 +38,9 @@ class TimerViewModel: ObservableObject {
     
     deinit {
         timer?.cancel()
-        completionSignalTimer?.cancel()  // NEW: очистка таймера сигналов
+        completionSignalTimer?.cancel()
         
-        // NEW: очистка background task (directly call UIApplication, not MainActor method)
+        // Cleanup background task (directly call UIApplication, not MainActor method)
         let taskID = backgroundTaskID
         if taskID != .invalid {
             Task { @MainActor in
@@ -60,18 +60,36 @@ class TimerViewModel: ObservableObject {
         timerState = .idle
     }
     
+    /// Begin background task for countdown (called immediately when countdown starts)
+    /// This ensures countdown works even when screen is locked
+    func beginBackgroundTaskForCountdown() {
+        // Only start if not already started
+        guard backgroundTaskID == .invalid else { return }
+        beginBackgroundTask()
+    }
+    
+    /// Schedule notification for countdown + meditation duration (called immediately when countdown starts)
+    /// This ensures notification fires even if app is killed during countdown
+    func scheduleNotificationForCountdown(totalDuration: TimeInterval) {
+        notificationService.scheduleTimerCompletionNotification(in: totalDuration)
+    }
+    
     func startTimerAfterCountdown() {
         startTime = Date()
         remainingTime = selectedDuration
         timerState = .running(remainingTime: selectedDuration)
         
-        // NEW: Тактильное + звуковое подтверждение старта
+        // Haptic + sound confirmation of start
         hapticFeedback.playMeditationStart()
         
-        // NEW: Start background task to keep running in background
-        beginBackgroundTask()
+        // Background task should already be started in beginBackgroundTaskForCountdown()
+        // Only start if not already started (fallback)
+        if backgroundTaskID == .invalid {
+            beginBackgroundTask()
+        }
         
-        // Schedule notification for timer completion
+        // Notification should already be scheduled in scheduleNotificationForCountdown()
+        // Re-schedule with exact remaining time (more accurate)
         scheduleTimerNotification()
         
         // Start countdown
@@ -108,10 +126,10 @@ class TimerViewModel: ObservableObject {
     func stopTimer() {
         timer?.cancel()
         timer = nil
-        completionSignalTimer?.cancel()  // NEW: останавливаем сигналы
+        completionSignalTimer?.cancel()
         completionSignalTimer = nil
         
-        // NEW: End background task
+        // End background task
         endBackgroundTask()
         
         // Cancel notification
@@ -147,22 +165,22 @@ class TimerViewModel: ObservableObject {
         timer = nil
         endTime = Date()
         
-        // NEW: Переходим в состояние ожидания подтверждения
+        // Transition to waiting for acknowledgment state
         timerState = .completedWaitingForAcknowledgment
         
         // Cancel scheduled notification (timer completed naturally)
         cancelTimerNotification()
         
-        // NEW: Начинаем повторяющиеся сигналы каждую секунду
+        // Start repeating completion signals every second
         startCompletionSignals()
     }
     
-    /// NEW: Начать повторяющиеся сигналы о завершении медитации
+    /// Start repeating completion signals
     private func startCompletionSignals() {
-        // Первый сигнал сразу
+        // First signal immediately
         playCompletionSignal()
         
-        // Затем каждую секунду
+        // Then every second
         completionSignalTimer = Timer.publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -170,18 +188,18 @@ class TimerViewModel: ObservableObject {
             }
     }
     
-    /// NEW: Воспроизвести сигнал завершения (звук + вибрация)
+    /// Play completion signal (sound + haptic)
     private func playCompletionSignal() {
         hapticFeedback.playMeditationCompletion()
     }
     
-    /// NEW: Остановить сигналы и подтвердить завершение медитации
+    /// Stop signals and acknowledge meditation completion
     func acknowledgeMeditationCompletion() {
-        // Останавливаем повторяющиеся сигналы
+        // Stop repeating signals
         completionSignalTimer?.cancel()
         completionSignalTimer = nil
         
-        // NEW: End background task
+        // End background task
         endBackgroundTask()
         
         // Переходим в финальное состояние
@@ -290,10 +308,10 @@ class TimerViewModel: ObservableObject {
     func resetTimer() {
         timer?.cancel()
         timer = nil
-        completionSignalTimer?.cancel()  // NEW: останавливаем сигналы
+        completionSignalTimer?.cancel()
         completionSignalTimer = nil
         
-        // NEW: End background task if still active
+        // End background task if still active
         endBackgroundTask()
         
         timerState = .idle
@@ -317,8 +335,8 @@ enum TimerState: Equatable {
     case selecting(duration: TimeInterval)
     case running(remainingTime: TimeInterval)
     case paused(remainingTime: TimeInterval)
-    case completedWaitingForAcknowledgment  // NEW: медитация завершена, ждем подтверждения
-    case completed  // Подтверждено, показываем форму
+    case completedWaitingForAcknowledgment  // Meditation completed, waiting for acknowledgment
+    case completed  // Acknowledged, show form
     
     var isRunning: Bool {
         if case .running = self { return true }

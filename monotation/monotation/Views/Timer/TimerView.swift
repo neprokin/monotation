@@ -14,6 +14,7 @@ struct TimerView: View {
     @State private var showSettings = false
     @State private var countdownPhase: Int = -1 // -1 = idle, 0 = "На старт!", 1-3 = countdown
     @State private var countdownProgress: Double = 0.0
+    @State private var countdownTimer: Timer?
     
     var body: some View {
         NavigationStack {
@@ -47,7 +48,7 @@ struct TimerView: View {
                                     .transition(.opacity)
                             }
                             
-                            // NEW: Show "Завершить" button when waiting for acknowledgment
+                            // Show "Завершить" button when waiting for acknowledgment
                             if viewModel.timerState.isWaitingForAcknowledgment {
                                 acknowledgmentButton
                                     .transition(.scale.combined(with: .opacity))
@@ -135,7 +136,14 @@ struct TimerView: View {
                 if case .idle = newState {
                     countdownPhase = -1
                     countdownProgress = 0.0
+                    countdownTimer?.invalidate()
+                    countdownTimer = nil
                 }
+            }
+            .onDisappear {
+                // Cleanup countdown timer
+                countdownTimer?.invalidate()
+                countdownTimer = nil
             }
         }
     }
@@ -152,7 +160,7 @@ struct TimerView: View {
             // Progress circle (monochrome - primary color)
             Circle()
                 .trim(from: 0, to: {
-                    // NEW: В состоянии завершения - 100%
+                    // In completion state - 100%
                     if viewModel.timerState.isWaitingForAcknowledgment {
                         return 1.0
                     } else if countdownPhase >= 0 {
@@ -172,7 +180,7 @@ struct TimerView: View {
             // Text: countdown, timer, or completion checkmark (unified typography)
             Group {
                 if viewModel.timerState.isWaitingForAcknowledgment {
-                    // NEW: Показываем галочку при завершении
+                    // Show checkmark on completion
                     Text("✓")
                         .font(.system(size: 80, weight: .light, design: .rounded))
                         .foregroundStyle(.primary)
@@ -214,6 +222,16 @@ struct TimerView: View {
     // MARK: - Countdown Logic
     
     private func startCountdown() {
+        // CRITICAL: Start background task IMMEDIATELY (before countdown)
+        // This ensures countdown works even when screen is locked
+        viewModel.beginBackgroundTaskForCountdown()
+        
+        // CRITICAL: Schedule notification IMMEDIATELY (countdownDuration + meditationDuration)
+        // This ensures notification fires even if app is killed during countdown
+        let countdownDuration: TimeInterval = 4.0
+        let totalDuration = countdownDuration + viewModel.selectedDuration
+        viewModel.scheduleNotificationForCountdown(totalDuration: totalDuration)
+        
         // Phase 0: "На старт!" (0 seconds, no fill)
         withAnimation {
             countdownPhase = 0
@@ -251,11 +269,6 @@ struct TimerView: View {
             
             print("⏱️ Starting timer after countdown")
             viewModel.startTimerAfterCountdown()
-            
-            // Force UI update
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                print("⏱️ Timer state: \(viewModel.timerState), isRunning: \(viewModel.isRunning)")
-            }
         }
     }
     

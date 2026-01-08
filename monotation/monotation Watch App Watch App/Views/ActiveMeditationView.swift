@@ -3,6 +3,7 @@
 //  monotation Watch App
 //
 //  Active meditation screen with timer and heart rate
+//  Handles meditation timer, pause/resume, and Smart Alarm integration
 //
 
 import SwiftUI
@@ -10,8 +11,7 @@ import WatchKit
 
 struct ActiveMeditationView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
-    @EnvironmentObject var runtimeManager: ExtendedRuntimeManager
-    @EnvironmentObject var alarmController: MeditationAlarmController  // Smart Alarm - ГЛАВНАЯ гарантия
+    @EnvironmentObject var alarmController: MeditationAlarmController
     @Environment(\.dismiss) private var dismiss
     
     @State private var timeRemaining: TimeInterval = 0
@@ -19,7 +19,7 @@ struct ActiveMeditationView: View {
     @State private var isPaused: Bool = false
     @State private var isWaitingForAcknowledgment: Bool = false
     @State private var startTime: Date?
-    @State private var endDate: Date?  // Время завершения медитации
+    @State private var endDate: Date?
     @State private var showCompletion: Bool = false
     
     private var duration: TimeInterval {
@@ -55,7 +55,7 @@ struct ActiveMeditationView: View {
             
             // Control buttons
             if isWaitingForAcknowledgment {
-                // NEW: Кнопка "Завершить" при ожидании подтверждения
+                // Button "Завершить" when waiting for acknowledgment
                 Button {
                     acknowledgeMeditationCompletion()
                 } label: {
@@ -64,7 +64,7 @@ struct ActiveMeditationView: View {
                 }
                 .buttonStyle(.borderedProminent)
             } else {
-                // Обычные кнопки управления
+                // Normal control buttons
                 HStack(spacing: 16) {
                     // Pause/Resume button
                     Button {
@@ -79,7 +79,7 @@ struct ActiveMeditationView: View {
                     }
                     .buttonStyle(.plain)
                     .frame(width: 60, height: 60)
-                    .background(Color.primary.opacity(0.2))  // Монохромная тема
+                    .background(Color.primary.opacity(0.2))
                     .cornerRadius(30)
                     
                     // Stop button
@@ -91,7 +91,7 @@ struct ActiveMeditationView: View {
                     }
                     .buttonStyle(.plain)
                     .frame(width: 50, height: 50)
-                    .background(Color.primary.opacity(0.1))  // Монохромная тема
+                    .background(Color.primary.opacity(0.1))
                     .cornerRadius(25)
                 }
             }
@@ -103,14 +103,13 @@ struct ActiveMeditationView: View {
             timeRemaining = duration
             startTimer()
             
-            // Вариант A: Если пользователь остановил Smart Alarm через системный UI "Остановить",
-            // автоматически показываем CompletionView (без промежуточного экрана)
+            // Вариант A: If user stopped Smart Alarm via system UI "Остановить",
+            // automatically show CompletionView (without intermediate screen)
             checkAndHandleSystemStop()
         }
         .onChange(of: alarmController.wasStoppedBySystem) { oldValue, newValue in
-            // Отслеживаем изменение флага (может установиться асинхронно после onAppear)
+            // Track flag change (may be set asynchronously after onAppear)
             if newValue {
-                print("🔄 [ActiveMeditation] wasStoppedBySystem changed to true - showing completion")
                 checkAndHandleSystemStop()
             }
         }
@@ -132,16 +131,14 @@ struct ActiveMeditationView: View {
     
     // MARK: - System Stop Handling (Вариант A)
     
-    /// Проверяет, был ли Smart Alarm остановлен через системный UI "Остановить"
-    /// и автоматически показывает CompletionView
+    /// Check if Smart Alarm was stopped via system UI "Остановить"
+    /// and automatically show CompletionView
     private func checkAndHandleSystemStop() {
-        print("🔍 [ActiveMeditation] Checking wasStoppedBySystem: \(alarmController.wasStoppedBySystem)")
         if alarmController.wasStoppedBySystem {
-            print("✅ [ActiveMeditation] User stopped via system UI - showing completion immediately")
             alarmController.resetStoppedBySystemFlag()
             isWaitingForAcknowledgment = false
             
-            // Убеждаемся, что timer остановлен и workout завершён
+            // Ensure timer is stopped and workout is ended
             timer?.invalidate()
             timer = nil
             if workoutManager.isSessionActive {
@@ -149,8 +146,6 @@ struct ActiveMeditationView: View {
             }
             
             showCompletion = true
-        } else {
-            print("ℹ️ [ActiveMeditation] wasStoppedBySystem is false - normal flow")
         }
     }
     
@@ -160,36 +155,16 @@ struct ActiveMeditationView: View {
         startTime = Date()
         endDate = Date().addingTimeInterval(timeRemaining)
         
-        print("🎯 [ActiveMeditation] Starting meditation timer")
-        print("📊 [ActiveMeditation] End date: \(endDate!)")
-        
-        // NOTE: Workout session already started in MainView during countdown
-        // This is for HR tracking, NOT for alarm guarantee
-        
-        // Haptic feedback: подтверждение старта медитации (UX только)
-        print("📳 [ActiveMeditation] Playing START haptic")
+        // Haptic feedback: confirmation of meditation start (UX only)
         WKInterfaceDevice.current().play(.start)
         
-        // ========================================
-        // КОНТУР 1 (ЕДИНСТВЕННАЯ ГАРАНТИЯ): Smart Alarm
-        // Это СИСТЕМНЫЙ механизм "будильника"
-        // Гарантированно работает в AOD/wrist-down
-        // ========================================
-        // NOTE: Smart Alarm should already be scheduled in MainView (before navigation)
-        // when app was still active. Only reschedule if not already active.
+        // Smart Alarm should already be scheduled in MainView (before navigation)
+        // Only reschedule if not already active (fallback)
         if !alarmController.isAlarmActive {
-            // Fallback: try to schedule if not already done (may fail if screen is locked)
             alarmController.scheduleAlarm(at: endDate!)
-            print("📅 [ActiveMeditation] Smart Alarm scheduled (fallback) for \(endDate!)")
-        } else {
-            print("📅 [ActiveMeditation] Smart Alarm already scheduled (from MainView)")
         }
         
-        // ========================================
-        // КОНТУР 2 (ВИЗУАЛЬНЫЙ): Timer для UI
-        // Только для отображения обратного отсчёта
-        // НЕ для гарантии уведомления!
-        // ========================================
+        // Visual timer for UI (NOT for guarantee - Smart Alarm is the guarantee)
         let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in
                 if self.timeRemaining > 0 {
@@ -209,23 +184,21 @@ struct ActiveMeditationView: View {
         timer = nil
         isPaused = true
         
-        // Отменяем Smart Alarm при паузе (перепланируем при resume)
+        // Cancel Smart Alarm when paused (will reschedule on resume)
         alarmController.cancelAlarm()
-        print("⏸️ [ActiveMeditation] Paused - cancelled alarm")
     }
     
     private func resumeTimer() {
         isPaused = false
         
-        // Пересчитываем новое время завершения
+        // Recalculate new end date
         let newEndDate = Date().addingTimeInterval(timeRemaining)
         endDate = newEndDate
         
-        // Перепланируем Smart Alarm
+        // Reschedule Smart Alarm
         alarmController.scheduleAlarm(at: newEndDate)
-        print("▶️ [ActiveMeditation] Resumed - Smart Alarm rescheduled for \(newEndDate)")
         
-        // Перезапускаем визуальный Timer
+        // Restart visual timer
         let meditationTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in
                 if self.timeRemaining > 0 {
@@ -242,12 +215,12 @@ struct ActiveMeditationView: View {
     
     private func stopTimer() {
         timer?.invalidate()
+        timer = nil
         isWaitingForAcknowledgment = false
         workoutManager.endWorkout()
         
-        // Отменяем Smart Alarm при досрочном завершении
+        // Cancel Smart Alarm on early stop
         alarmController.cancelAlarm()
-        print("⏹️ [ActiveMeditation] Stopped early - cancelled alarm")
         
         // Show completion if at least 3 seconds passed
         if duration - timeRemaining >= 3 {
@@ -259,40 +232,35 @@ struct ActiveMeditationView: View {
     
     private func timerCompleted() {
         timer?.invalidate()
+        timer = nil
         workoutManager.endWorkout()
         
-        print("⏰ [ActiveMeditation] Timer COMPLETED")
-        print("📊 [ActiveMeditation] Smart Alarm active: \(alarmController.isAlarmActive)")
+        // DO NOT cancel Smart Alarm!
+        // Smart Alarm should fire and provide system haptic + UI
+        // System will automatically show alarm UI and repeat haptic
         
-        // НЕ отменяем Smart Alarm!
-        // Smart Alarm должен сработать и дать системный haptic + UI
-        // Система автоматически покажет alarm UI и будет повторять haptic
-        
-        // Переходим в состояние ожидания подтверждения
+        // Transition to waiting for acknowledgment state
         isWaitingForAcknowledgment = true
     }
     
-    // Подтвердить завершение медитации
-    // Вызывается если пользователь нажал "Завершить" в UI (не через системный "Остановить")
+    /// Acknowledge meditation completion
+    /// Called if user pressed "Завершить" in UI (not via system "Остановить")
     private func acknowledgeMeditationCompletion() {
-        print("✅ [ActiveMeditation] User acknowledged completion via app UI - stopping Smart Alarm")
-        
-        // Останавливаем Smart Alarm (системный haptic + UI)
+        // Stop Smart Alarm (system haptic + UI)
         alarmController.cancelAlarm()
         
-        // Показываем форму завершения
+        // Show completion form
         isWaitingForAcknowledgment = false
         showCompletion = true
     }
     
     private func cleanup() {
-        print("🧹 [ActiveMeditation] Cleanup")
         timer?.invalidate()
         timer = nil
         
-        // НЕ отменяем Smart Alarm здесь!
-        // Alarm должен продолжать работать если пользователь не подтвердил завершение
-        // Он будет отменён только в acknowledgeMeditationCompletion()
+        // DO NOT cancel Smart Alarm here!
+        // Alarm should continue working if user hasn't acknowledged completion
+        // It will be cancelled only in acknowledgeMeditationCompletion()
     }
     
     // MARK: - Helpers
@@ -305,12 +273,11 @@ struct ActiveMeditationView: View {
 }
 
 // MARK: - Preview
+
 #Preview {
     NavigationStack {
         ActiveMeditationView()
             .environmentObject(WorkoutManager())
-            .environmentObject(ExtendedRuntimeManager())
             .environmentObject(MeditationAlarmController())
     }
 }
-

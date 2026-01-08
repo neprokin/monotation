@@ -23,8 +23,9 @@ actor SupabaseService {
            !configURL.contains("YOUR_SUPABASE_URL_HERE"),
            !configKey.contains("YOUR_SUPABASE_ANON_KEY_HERE") {
             // Initialize Supabase client
-            // Note: emitLocalSessionAsInitialSession warning is non-critical
-            // and will be fixed in future SDK versions
+            // TODO: Add AuthClient configuration with emitLocalSessionAsInitialSession: true
+            // when Supabase is properly configured. This will fix the deprecation warning.
+            // For now, use simple initialization to avoid compilation errors.
             self.client = SupabaseClient(
                 supabaseURL: url,
                 supabaseKey: configKey
