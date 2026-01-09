@@ -7,12 +7,10 @@
 ## 📖 Структура документации
 
 ### Архитектура и дизайн
-- **[ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md)** - Полная архитектура проекта (MVVM, iOS App, Watch App, Smart Alarm)
-- **[UX_UI_DOCUMENTATION.md](UX_UI_DOCUMENTATION.md)** - Референс UX/UI Watch App (сохранен при переписывании v2.0)
+- **[ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md)** - Полная архитектура проекта (MVVM, iOS App, Watch App, Smart Alarm, CloudKit)
 
 ### Настройка и разработка
-- **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** - Настройка Supabase backend (временное решение для разработки)
-- **[PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md)** - Подготовка к релизу в App Store и миграция на CloudKit
+- **[PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md)** - Подготовка к релизу в TestFlight и App Store
 
 ### История и архив
 - **[HAPTIC_COMPLETION_ISSUE.md](HAPTIC_COMPLETION_ISSUE.md)** - История решения проблемы haptic на Apple Watch (архив)
@@ -29,4 +27,5 @@
 
 ---
 
-**Последнее обновление**: 2026-01-08
+**Последнее обновление**: 2026-01-09  
+**Примечание**: CloudKit миграция завершена, информация объединена с ARCHITECTURE_CURRENT.md

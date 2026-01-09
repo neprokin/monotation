@@ -22,8 +22,7 @@ class HistoryViewModel: ObservableObject {
     
     // MARK: - Private Properties
     
-    private let supabaseService = SupabaseService.shared
-    private let authService = AuthService.shared
+    private let cloudKitService = CloudKitService.shared
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
@@ -58,19 +57,16 @@ class HistoryViewModel: ObservableObject {
         defer { isLoading = false }
         
         do {
-            // Get user ID from auth service, or use temporary ID if not authenticated
-            let userId = authService.currentUserId ?? "temp-user-id"
-            
-            // Load from Supabase
-            meditations = try await supabaseService.fetchMeditations(for: userId)
+            // CloudKit automatically filters by iCloud account
+            meditations = try await cloudKitService.fetchMeditations()
             
             groupMeditations()
         } catch {
             print("❌ HistoryViewModel.loadMeditations error: \(error)")
             errorMessage = "Ошибка загрузки медитаций: \(error.localizedDescription)"
             showError = true
-            // Fallback to sample data on error
-            meditations = Meditation.sampleList
+            // Fallback to empty array on error (CloudKit will sync automatically)
+            meditations = []
             groupMeditations()
         }
     }

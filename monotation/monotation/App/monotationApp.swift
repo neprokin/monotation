@@ -6,10 +6,16 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct monotationApp: App {
     @StateObject private var connectivityManager = ConnectivityManager.shared
+    let container: ModelContainer
+    
+    init() {
+        container = ModelContainer.create()
+    }
     
     var body: some Scene {
         WindowGroup {
@@ -17,5 +23,6 @@ struct monotationApp: App {
                 .tint(.primary) // Monochrome accent color
                 .environmentObject(connectivityManager)
         }
+        .modelContainer(container)
     }
 }

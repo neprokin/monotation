@@ -5,8 +5,9 @@
 Этот документ описывает **полную архитектуру проекта monotation**, включая:
 - Общую архитектуру (MVVM, структура проекта, iOS App, Watch App)
 - Smart Alarm решение для Apple Watch (детальное описание)
+- CloudKit конфигурацию и синхронизацию данных
 
-**ВАЖНО**: Все описанные компоненты и их взаимодействие должны быть точно воспроизведены в новой версии!
+**Статус**: ✅ Все описанные компоненты реализованы в v2.0
 
 ---
 
@@ -16,7 +17,7 @@
 
 **iOS App**:
 ```
-Views (SwiftUI) → ViewModels (ObservableObject) → Services → Backend/Supabase
+Views (SwiftUI) → ViewModels (ObservableObject) → Services → CloudKit (SwiftData)
 ```
 
 **Watch App**:
@@ -40,15 +41,17 @@ monotation/
 │   │   ├── MeditationFormViewModel.swift
 │   │   └── HistoryViewModel.swift
 │   ├── Models/                    # Data models
-│   │   ├── Meditation.swift
+│   │   ├── MeditationModel.swift  # SwiftData @Model для CloudKit
+│   │   ├── Meditation.swift       # Struct (для обратной совместимости)
 │   │   ├── MeditationPose.swift
 │   │   └── MeditationPlace.swift
 │   ├── Services/                  # Backend & System
-│   │   ├── SupabaseService.swift  # CRUD с Supabase
-│   │   ├── AuthService.swift      # Apple Sign In (опционально)
+│   │   ├── CloudKitService.swift  # CRUD с CloudKit (SwiftData)
+│   │   ├── AuthService.swift      # Упрощённый (CloudKit использует iCloud автоматически)
 │   │   ├── NotificationService.swift  # Time-sensitive уведомления
 │   │   └── ConnectivityManager.swift  # Watch ↔ iPhone sync
-│   └── Config/                    # Supabase keys (в .gitignore)
+│   └── App/                       # App configuration
+│       └── ModelContainer.swift   # SwiftData ModelContainer для CloudKit
 │
 └── monotation Watch App Watch App/  # watchOS App
     ├── Views/
@@ -67,7 +70,7 @@ monotation/
 
 **iOS App (MVVM)**:
 ```
-User Action → View → ViewModel → Service → Supabase
+User Action → View → ViewModel → CloudKitService → SwiftData/CloudKit
                 ↑         ↓
             @Published  Update
 ```
@@ -87,14 +90,15 @@ User Action → View → Service (AlarmController/WorkoutManager) → HealthKit/
 - **ViewModels**: ObservableObject с @Published properties, бизнес-логика для UI
   - `TimerViewModel` - логика таймера, background tasks
   - `MeditationFormViewModel` - валидация и сохранение
-  - `HistoryViewModel` - загрузка истории из Supabase
+  - `HistoryViewModel` - загрузка истории из CloudKit
 - **Services**: Actor/Class для backend и system интеграции
-  - `SupabaseService` - CRUD операции с Supabase
-  - `AuthService` - Apple Sign In (опционально)
+  - `CloudKitService` - CRUD операции с CloudKit через SwiftData
+  - `AuthService` - Упрощённый (CloudKit использует iCloud автоматически)
   - `NotificationService` - Time-sensitive уведомления (fallback)
   - `ConnectivityManager` - синхронизация с Watch App
-- **Models**: Простые Swift structs (Codable, Identifiable)
-  - `Meditation` - основная модель медитации
+- **Models**: SwiftData @Model для CloudKit + Swift structs для обратной совместимости
+  - `MeditationModel` - SwiftData @Model для CloudKit синхронизации
+  - `Meditation` - Swift struct (для обратной совместимости)
   - `MeditationPose`, `MeditationPlace` - enums
 
 **Watch App**:
@@ -112,7 +116,7 @@ User Action → View → Service (AlarmController/WorkoutManager) → HealthKit/
 
 **WatchConnectivity (WCSession)**:
 - Watch App отправляет данные медитации в iPhone App
-- iPhone App сохраняет в Supabase и HealthKit
+- iPhone App сохраняет в CloudKit (через SwiftData) и HealthKit
 - Работает только на реальных устройствах (не в симуляторе)
 
 **Поток синхронизации**:
@@ -125,25 +129,36 @@ WCSession.sendMessage()
     ↓
 iPhone App (ConnectivityManager.receiveMessage())
     ↓
-SupabaseService.insertMeditation()
+CloudKitService.insertMeditation()
+    ↓
+SwiftData/CloudKit (автоматическая синхронизация через iCloud)
     ↓
 HealthKit сохранение
 ```
 
 ### Backend и хранение данных
 
-**Текущее решение (временное)**:
-- **Supabase** (PostgreSQL) - для разработки и тестирования
+**Текущее решение**:
+- ✅ **CloudKit** (SwiftData) - основное хранилище данных
+  - Автоматическая синхронизация через iCloud
+  - Встроенная авторизация через iCloud аккаунт
+  - Оффлайн-первый (работает без интернета)
+  - Данные синхронизируются между iPhone/Watch/iPad автоматически
 - **HealthKit** - для Mindful Minutes и Workout данных
 - **UserDefaults** - для persisted Smart Alarm (endDate)
 
-**Планируемое решение**:
-- **CloudKit** - после активации Apple Developer Account
-- Автоматическая синхронизация через iCloud
-- Встроенная авторизация через iCloud
+**CloudKit настройка**:
+- Container ID: `iCloud.com.neprokin.monotation`
+- Database: Private Database (автоматически)
+- Zone: `com.apple.coredata.cloudkit.zone` (SwiftData автоматически)
+- Record Type: `CD_MeditationModel` (префикс `CD_` добавляется SwiftData)
 
-📖 **Детали настройки**: [SUPABASE_SETUP.md](SUPABASE_SETUP.md)  
-📖 **План миграции**: [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md)
+**Проверка данных в CloudKit Dashboard**:
+1. [icloud.developer.apple.com](https://icloud.developer.apple.com)
+2. Container: `iCloud.com.neprokin.monotation`
+3. Data → Records
+4. Выбрать: **Private Database** + **`com.apple.coredata.cloudkit.zone`**
+5. Использовать: **"Fetch Changes"** (не "Query Records")
 
 ---
 
@@ -657,12 +672,11 @@ CompletionView (автоматически)
 ## 📚 См. также
 
 - [README.md](../README.md) - Главная документация проекта
-- [SUPABASE_SETUP.md](SUPABASE_SETUP.md) - Настройка Supabase backend
-- [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md) - План миграции на CloudKit
-- [UX_UI_DOCUMENTATION.md](UX_UI_DOCUMENTATION.md) - Референс UX/UI Watch App
+- [PRODUCTION_RELEASE.md](PRODUCTION_RELEASE.md) - Подготовка к релизу в TestFlight и App Store
 
 ---
 
 **Дата создания**: 2026-01-08  
-**Версия**: 2.0  
-**Статус**: ✅ Полная документация архитектуры проекта (общая + Smart Alarm)
+**Последнее обновление**: 2026-01-09  
+**Версия**: 2.1  
+**Статус**: ✅ Полная документация архитектуры проекта (общая + Smart Alarm + CloudKit)

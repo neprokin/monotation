@@ -5,6 +5,11 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
+		<string>remote-notification</string>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Приложение использует данные о пульсе для анализа медитации</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Приложение сохраняет данные о медитациях в HealthKit</string>
 </dict>
 </plist>

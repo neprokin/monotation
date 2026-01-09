@@ -45,13 +45,11 @@ class ConnectivityManager: NSObject, ObservableObject {
         let poseString = data["pose"] as? String ?? "Лотос"
         let pose = MeditationPose(rawValue: poseString) ?? .lotus
         
-        // Get user ID
-        let userId = AuthService.shared.currentUserId ?? "temp-user-id"
-        
         // Create meditation object
+        // CloudKit automatically uses iCloud account (no userId needed)
         let meditation = Meditation(
             id: UUID(),
-            userId: userId,
+            userId: "iCloud", // CloudKit uses iCloud account automatically
             startTime: startTime,
             endTime: endTime,
             pose: pose,
@@ -60,17 +58,17 @@ class ConnectivityManager: NSObject, ObservableObject {
             createdAt: Date()
         )
         
-        // Save to Supabase
+        // Save to CloudKit
         do {
-            try await SupabaseService.shared.insertMeditation(meditation)
-            print("✅ iOS: Meditation from Watch saved to Supabase")
+            try await CloudKitService.shared.insertMeditation(meditation)
+            print("✅ iOS: Meditation from Watch saved to CloudKit")
             print("   Duration: \(Int(duration))s, HR: \(Int(averageHeartRate)) bpm")
             
             // Notify other parts of the app to refresh (if needed)
             NotificationCenter.default.post(name: .meditationAdded, object: nil)
             
         } catch {
-            print("❌ iOS: Failed to save Watch meditation to Supabase: \(error)")
+            print("❌ iOS: Failed to save Watch meditation to CloudKit: \(error)")
             print("⚠️ iOS: Data is still saved in HealthKit on Watch")
             
             // TODO: Store in local queue for retry later

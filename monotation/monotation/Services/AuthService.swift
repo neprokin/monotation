@@ -2,14 +2,15 @@
 //  AuthService.swift
 //  monotation
 //
-//  Authentication service with Apple Sign In
+//  Authentication service (simplified for CloudKit)
+//  Note: CloudKit uses iCloud account automatically, so authentication is not required.
+//  This service is kept for potential future Apple Sign In integration.
 //
 
 import Foundation
 import UIKit
 import Combine
 import AuthenticationServices
-import Supabase
 
 @MainActor
 class AuthService: NSObject, ObservableObject {
@@ -17,173 +18,45 @@ class AuthService: NSObject, ObservableObject {
     
     // MARK: - Published Properties
     
-    @Published var currentUser: User?
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var errorMessage: String?
     
     // MARK: - Private Properties
     
-    private let supabaseService = SupabaseService.shared
-    
     private override init() {
         super.init()
-        checkAuthState()
+        // CloudKit uses iCloud account automatically, so user is always "authenticated"
+        isAuthenticated = true
     }
     
-    // MARK: - Check Auth State
+    // MARK: - Apple Sign In (Future Implementation)
     
-    func checkAuthState() {
-        Task {
-            let isAvailable = await supabaseService.isAvailable
-            if isAvailable,
-               let authClient = await supabaseService.authClient {
-                do {
-                    let session = try await authClient.session
-                    // Check if session is expired (required with emitLocalSessionAsInitialSession: true)
-                    if session.isExpired {
-                        // Session expired, user needs to sign in again
-                        isAuthenticated = false
-                        currentUser = nil
-                    } else {
-                        await updateUser(from: session.user)
-                    }
-                } catch {
-                    // No session - user not logged in
-                    isAuthenticated = false
-                    currentUser = nil
-                }
-            } else {
-                // Supabase not configured, use mock auth
-                isAuthenticated = false
-                currentUser = nil
-            }
-        }
-    }
-    
-    // MARK: - Apple Sign In
-    
-    // TODO: Complete Apple Sign In implementation
-    // - Create AuthView for UI
-    // - Complete delegate setup
-    // - Configure Apple Sign In in Supabase (see SUPABASE_SETUP.md Step 5)
+    // TODO: Complete Apple Sign In implementation if needed in the future
+    // For now, CloudKit uses iCloud account automatically
     func signInWithApple() async throws {
-        let isAvailable = await supabaseService.isAvailable
-        guard isAvailable else {
-            // Mock sign in for development
-            await mockSignIn()
-            return
-        }
-        
         isLoading = true
         defer { isLoading = false }
         
-        do {
-            // Request Apple ID credential
-            let appleIDProvider = ASAuthorizationAppleIDProvider()
-            let request = appleIDProvider.createRequest()
-            request.requestedScopes = [.fullName, .email]
-            
-            // Perform authorization
-            let authorizationController = ASAuthorizationController(authorizationRequests: [request])
-            authorizationController.delegate = self
-            authorizationController.presentationContextProvider = self
-            
-            // This will be handled in delegate methods
-            // For now, we'll use a simplified approach
-            throw AuthError.notImplemented("Apple Sign In delegate setup needed")
-            
-        } catch {
-            errorMessage = error.localizedDescription
-            throw error
-        }
+        // CloudKit doesn't require explicit sign in
+        // iCloud account is used automatically
+        isAuthenticated = true
     }
     
     // MARK: - Sign Out
     
     func signOut() async throws {
-        let isAvailable = await supabaseService.isAvailable
-        guard isAvailable else {
-            // Mock sign out
-            isAuthenticated = false
-            currentUser = nil
-            return
-        }
-        
-        do {
-            guard let authClient = await supabaseService.authClient else {
-                isAuthenticated = false
-                currentUser = nil
-                return
-            }
-            
-            try await authClient.signOut()
-            isAuthenticated = false
-            currentUser = nil
-        } catch {
-            errorMessage = error.localizedDescription
-            throw error
-        }
+        // CloudKit doesn't support sign out
+        // User data is tied to iCloud account
+        isAuthenticated = false
     }
     
     // MARK: - Get Current User ID
     
     var currentUserId: String? {
-        currentUser?.id.uuidString
-    }
-    
-    // MARK: - Helper Methods
-    
-    private func updateUser(from user: User) async {
-        currentUser = user
-        isAuthenticated = true
-    }
-    
-    private func mockSignIn() async {
-        // Mock user for development when Supabase not configured
-        // Create a simple mock user - we'll use a basic structure
-        // Note: This is a temporary solution until Supabase is configured
-        isAuthenticated = true
-        // currentUser will be nil for mock mode, but isAuthenticated = true allows app to work
-    }
-}
-
-// MARK: - ASAuthorizationControllerDelegate
-
-extension AuthService: ASAuthorizationControllerDelegate {
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-            Task {
-                do {
-                    // Get identity token
-                    guard let identityToken = appleIDCredential.identityToken,
-                          let idTokenString = String(data: identityToken, encoding: .utf8) else {
-                        throw AuthError.invalidToken
-                    }
-                    
-                    // Sign in with Supabase
-                    guard let authClient = await supabaseService.authClient else {
-                        throw AuthError.signInFailed(NSError(domain: "AuthService", code: -1))
-                    }
-                    
-                    let session = try await authClient.signInWithIdToken(
-                        credentials: .init(
-                            provider: .apple,
-                            idToken: idTokenString
-                        )
-                    )
-                    
-                    await updateUser(from: session.user)
-                } catch {
-                    errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-    
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        errorMessage = error.localizedDescription
-        isLoading = false
+        // CloudKit uses iCloud account automatically
+        // Return nil as CloudKit handles user identification internally
+        nil
     }
 }
 

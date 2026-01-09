@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import SwiftData
 
 @MainActor
 class MeditationFormViewModel: ObservableObject {
@@ -23,8 +24,8 @@ class MeditationFormViewModel: ObservableObject {
     
     // MARK: - Private Properties
     
-    private let supabaseService = SupabaseService.shared
-    private let authService = AuthService.shared
+    // Use CloudKitService for now, but we could also use ModelContext directly
+    private let cloudKitService = CloudKitService.shared
     
     // MARK: - Session Info
     
@@ -85,10 +86,10 @@ class MeditationFormViewModel: ObservableObject {
             // Create meditation object
             let meditation = createMeditation()
             
-            // Save to Supabase
-            try await supabaseService.insertMeditation(meditation)
+            // Save to CloudKit
+            try await cloudKitService.insertMeditation(meditation)
             
-            print("✅ Meditation saved to Supabase:", meditation.asMarkdown)
+            print("✅ Meditation saved to CloudKit:", meditation.asMarkdown)
             
             return true
         } catch {
@@ -110,12 +111,10 @@ class MeditationFormViewModel: ObservableObject {
         
         let noteText = note.trimmingCharacters(in: .whitespaces)
         
-        // Get user ID from auth service, or use temporary ID if not authenticated
-        let userId = authService.currentUserId ?? "temp-user-id"
-        
+        // CloudKit automatically uses iCloud account (no userId needed)
         return Meditation(
             id: UUID(),
-            userId: userId,
+            userId: "iCloud", // CloudKit uses iCloud account automatically
             startTime: startTime,
             endTime: endTime,
             pose: selectedPose,

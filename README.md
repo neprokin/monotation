@@ -22,7 +22,7 @@
 - 🕐 **Таймер медитации** - выбор времени с обратным отсчетом
 - 💾 **Сохранение записей** - дата, время, длительность, поза, место, заметка
 - 📚 **История медитаций** - хронологический список всех практик
-- 🔐 **Apple Sign In** - опционально (для продакшена, см. [docs/PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md))
+- ☁️ **CloudKit синхронизация** - автоматическая через iCloud (не требуется Apple Sign In)
 
 ### ⌚️ watchOS App (✅ протестировано на реальных устройствах)
 - 🕐 **Таймер медитации** - выбор длительности, обратный отсчет
@@ -35,13 +35,11 @@
 - ✅ iPhone + Apple Watch (спаренные)
 - ✅ Watch Connectivity: синхронизация работает
 - ✅ Медитации с Watch появляются в истории iPhone
-- ✅ Данные сохраняются в HealthKit + Supabase
+- ✅ Данные сохраняются в HealthKit + CloudKit (автоматическая синхронизация через iCloud)
 - ✅ Пульс отслеживается и передается
 
 ### ⚠️ Известные ограничения
 - **Watch Connectivity не работает в симуляторе** (только на реальных устройствах)
-- **Supabase Free**: автопауза через 7 дней неактивности
-  - Решение: CloudKit миграция (после активации Apple Developer Account)
 
 ---
 
@@ -50,7 +48,7 @@
 - **Platforms**: iOS 17.0+ • watchOS 10.0+
 - **Language**: Swift 5.9+
 - **UI**: SwiftUI
-- **Backend**: Supabase (PostgreSQL + Auth) → CloudKit (планируется)
+- **Backend**: CloudKit (SwiftData) - автоматическая синхронизация через iCloud
 - **Health**: HealthKit (Mindful Minutes, Heart Rate, Workouts)
 - **Connectivity**: WatchConnectivity (iPhone ↔ Watch sync)
 - **Architecture**: MVVM
@@ -64,8 +62,7 @@
 
 - macOS 14.0+ (Sonoma)
 - Xcode 15.0+
-- Apple Developer Account (для Sign in with Apple)
-- Supabase Account (бесплатный tier)
+- Apple Developer Account ($99/год) - для CloudKit и TestFlight
 
 ### Установка
 
@@ -80,25 +77,17 @@
    open monotation.xcodeproj
    ```
 
-3. **Настрой Supabase:**
-   - 📖 **Подробная инструкция**: [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)
-   - Кратко:
-     - Создай проект на [supabase.com](https://supabase.com)
-     - В Xcode: создай `Config.swift` в папке `Config/` со следующим содержимым:
-       ```swift
-       import Foundation
-       enum SupabaseConfig {
-           static let url = "YOUR_SUPABASE_URL_HERE"
-           static let anonKey = "YOUR_SUPABASE_ANON_KEY_HERE"
-       }
-       ```
-     - Замени `YOUR_SUPABASE_URL_HERE` и `YOUR_SUPABASE_ANON_KEY_HERE` на реальные ключи
-     - Выполни SQL из `docs/SUPABASE_SETUP.md` для создания таблицы
+3. **Настрой CloudKit:**
+   - CloudKit настроен автоматически через iCloud Capability
+   - Container ID: `iCloud.com.neprokin.monotation`
+   - Данные синхронизируются автоматически через iCloud
+   - 📖 **Детали**: [docs/ARCHITECTURE_CURRENT.md](docs/ARCHITECTURE_CURRENT.md#cloudkit-текущая-конфигурация)
 
 4. **Настрой Signing:**
    - В Xcode: Target → Signing & Capabilities
    - Выбери свой Team
-   - Добавь capability "Sign in with Apple"
+   - Добавь capability "iCloud" (CloudKit настроится автоматически)
+   - ⚠️ **Apple Sign In не требуется** - CloudKit использует iCloud аккаунт автоматически
 
 5. **Запусти:**
    - `⌘ + R` для запуска на симуляторе
@@ -117,12 +106,17 @@ monotation/
 │   │   └── History/
 │   ├── ViewModels/                # Business logic
 │   ├── Models/                    # Data models
+│   │   ├── MeditationModel.swift  # SwiftData @Model для CloudKit
+│   │   ├── Meditation.swift       # Struct (для обратной совместимости)
+│   │   ├── MeditationPose.swift
+│   │   └── MeditationPlace.swift
 │   ├── Services/                  # Backend & System
-│   │   ├── SupabaseService.swift
-│   │   ├── AuthService.swift
+│   │   ├── CloudKitService.swift  # CRUD с CloudKit (SwiftData)
+│   │   ├── AuthService.swift      # Упрощённый (CloudKit использует iCloud автоматически)
 │   │   ├── NotificationService.swift
 │   │   └── ConnectivityManager.swift
-│   └── Config/                    # Supabase keys (в .gitignore)
+│   └── App/                       # App configuration
+│       └── ModelContainer.swift   # SwiftData ModelContainer для CloudKit
 │
 └── monotation Watch App Watch App/  # watchOS App
     ├── Views/
@@ -151,7 +145,7 @@ monotation/
 
 ### Data Flow (iOS App)
 ```
-User Action → View → ViewModel → Service → Supabase
+User Action → View → ViewModel → CloudKitService → SwiftData/CloudKit
                 ↑         ↓
             @Published  Update
 ```
@@ -252,12 +246,10 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 
 ### Основная документация
 - [docs/ARCHITECTURE_CURRENT.md](docs/ARCHITECTURE_CURRENT.md) - Полная архитектура проекта (MVVM, iOS App, Watch App, Smart Alarm)
-- [docs/UX_UI_DOCUMENTATION.md](docs/UX_UI_DOCUMENTATION.md) - Референс UX/UI Watch App (для будущих изменений)
 - [docs/HAPTIC_COMPLETION_ISSUE.md](docs/HAPTIC_COMPLETION_ISSUE.md) - История решения проблемы haptic (архив)
 
 ### Настройка и разработка
-- [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) - Настройка Supabase backend (временное решение)
-- [docs/PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md) - Подготовка к релизу и миграция на CloudKit
+- [docs/PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md) - Подготовка к релизу в TestFlight и App Store
 
 ### Референс
 - [docs/reference/REFERENCE_APPLE_HEALTH_ADA.md](docs/reference/REFERENCE_APPLE_HEALTH_ADA.md) - Референс Apple Health и ADA критерии
@@ -270,24 +262,26 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 
 ### ✅ v1.0 - MVP - Завершено
 - [x] iOS App: Таймер, сохранение, история
-- [x] Supabase backend интеграция
 - [x] Монохромный дизайн
 - [x] Тестирование всех функций
 
-### ✅ v2.0 - Smart Alarm Implementation - Завершено
+### ✅ v2.0 - Smart Alarm + CloudKit Migration - Завершено
 - [x] Watch App с Smart Alarm архитектурой
 - [x] Гарантированные haptic уведомления в AOD режиме
 - [x] Мониторинг пульса (HKWorkoutSession)
 - [x] Синхронизация Watch ↔ iPhone
 - [x] Fallback уведомления на iPhone
-- [x] Полная документация архитектуры и UX/UI
+- [x] Миграция с Supabase на CloudKit
+- [x] SwiftData модели для CloudKit
+- [x] Автоматическая синхронизация через iCloud
+- [x] Полная документация архитектуры
 
 ### 📋 v2.1 - Polish & Release
 **Цель**: Подготовка к App Store
-- [ ] Apple Sign In (опционально)
-- [ ] Миграция на CloudKit (рекомендуется)
+- [ ] TestFlight Internal Testing
 - [ ] App Store Connect setup
 - [ ] TestFlight бета-тестирование
+- [ ] App Store Review
 
 ### 📋 v3.0 - Улучшения UX
 **Цель**: Расширенная функциональность
@@ -308,7 +302,7 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 
 ## 🎯 Текущий статус проекта
 
-**Фаза**: v2.0 - Smart Alarm Implementation ✅ Complete
+**Фаза**: v2.0 - CloudKit Migration ✅ Complete
 
 **Что работает:**
 - ✅ **Watch App**: Полностью переписан с Smart Alarm архитектурой
@@ -317,6 +311,7 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 - ✅ **Вариант A**: Автоматический CompletionView при системном "Остановить"
 - ✅ **Countdown**: Работает на обоих платформах (4 секунды: 🧘 → 3 → 2 → 1)
 - ✅ **Синхронизация**: Watch ↔ iPhone через WatchConnectivity
+- ✅ **CloudKit**: Миграция завершена, данные синхронизируются через iCloud
 - ✅ **Fallback уведомления**: Time-sensitive на iPhone
 - ✅ **Background execution**: Работает на обоих платформах
 
@@ -324,17 +319,13 @@ git commit -m "refactor: extract MeditationDetailView to separate file"
 - ✅ Smart Alarm планируется ДО workout session (критично!)
 - ✅ WKBackgroundModes: только `alarm` (не `mindfulness`)
 - ✅ Timer с RunLoop.main.add(..., forMode: .common)
+- ✅ CloudKit с SwiftData для автоматической синхронизации
 - ✅ Полная документация архитектуры и UX/UI
 
-**В режиме разработки:**
-- ⚠️ Используется `temp-user-id` (для тестирования без авторизации)
-- ⚠️ Загружаются все медитации (без фильтра по userId)
-- ⚠️ Временные RLS policies в Supabase
-
 **Следующие шаги:**
-1. Миграция на CloudKit (рекомендуется) или настройка production Supabase
-2. Apple Sign In (опционально)
-3. Подготовка к релизу в App Store
+1. TestFlight Internal Testing
+2. Подготовка к релизу в App Store
+3. App Store Review
 
 📖 **План релиза**: [docs/PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md)
 
@@ -360,12 +351,12 @@ MIT License - см. [LICENSE](LICENSE) для деталей.
 ## 🙏 Acknowledgments
 
 - [Cursor](https://cursor.com) - AI-powered IDE
-- [Supabase](https://supabase.com) - Backend platform
+- [CloudKit](https://developer.apple.com/documentation/cloudkit) - Backend platform
 - [SwiftUI](https://developer.apple.com/xcode/swiftui/) - UI framework
 
 ---
 
-**Последнее обновление**: 8 января 2026  
-**Версия**: 2.0 (Smart Alarm Implementation)  
+**Последнее обновление**: 9 января 2026  
+**Версия**: 2.0 (CloudKit Migration Complete)  
 **GitHub**: [github.com/neprokin/monotation](https://github.com/neprokin/monotation)
 
