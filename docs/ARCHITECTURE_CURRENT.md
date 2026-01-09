@@ -48,6 +48,7 @@ monotation/
 │   ├── Services/                  # Backend & System
 │   │   ├── CloudKitService.swift  # CRUD с CloudKit (SwiftData)
 │   │   ├── AuthService.swift      # Упрощённый (CloudKit использует iCloud автоматически)
+│   │   ├── ObsidianService.swift  # Интеграция с Obsidian (Markdown файлы)
 │   │   ├── NotificationService.swift  # Time-sensitive уведомления
 │   │   └── ConnectivityManager.swift  # Watch ↔ iPhone sync
 │   └── App/                       # App configuration
@@ -94,6 +95,7 @@ User Action → View → Service (AlarmController/WorkoutManager) → HealthKit/
 - **Services**: Actor/Class для backend и system интеграции
   - `CloudKitService` - CRUD операции с CloudKit через SwiftData
   - `AuthService` - Упрощённый (CloudKit использует iCloud автоматически)
+  - `ObsidianService` - Интеграция с Obsidian (автоматическое добавление медитаций в Markdown файл)
   - `NotificationService` - Time-sensitive уведомления (fallback)
   - `ConnectivityManager` - синхронизация с Watch App
 - **Models**: SwiftData @Model для CloudKit + Swift structs для обратной совместимости
@@ -159,6 +161,38 @@ HealthKit сохранение
 3. Data → Records
 4. Выбрать: **Private Database** + **`com.apple.coredata.cloudkit.zone`**
 5. Использовать: **"Fetch Changes"** (не "Query Records")
+
+### Интеграция с Obsidian
+
+**Назначение**: Автоматическое добавление медитаций в Markdown файл для анализа в Obsidian.
+
+**Реализация**:
+- `ObsidianService` - сервис для работы с Markdown файлами
+- Автоматическая синхронизация после сохранения медитации в CloudKit
+- Дедупликация по дате и времени
+- Поддержка iCloud Drive файлов через security-scoped bookmarks
+
+**Настройка**:
+- Путь к файлу настраивается в Settings → "Интеграция с Obsidian"
+- Используется нативный `.fileImporter()` для выбора файла из iCloud Drive
+- Файл должен быть в формате Markdown (`sessions.md`)
+
+**Формат записи**:
+```markdown
+### DD Month
+- **HH:MM** — X минут
+- **Поза**: [Поза]
+- **Место**: [Место]
+- **Заметки**:
+  - [Заметка 1]
+  - [Заметка 2]
+```
+
+**Особенности**:
+- Автоматическое создание заголовков месяца и дня, если их нет
+- Вставка записей в правильное место (хронологический порядок)
+- Дедупликация предотвращает дублирование записей
+- Работает с файлами в iCloud Drive
 
 ---
 
@@ -679,4 +713,4 @@ CompletionView (автоматически)
 **Дата создания**: 2026-01-08  
 **Последнее обновление**: 2026-01-09  
 **Версия**: 2.1  
-**Статус**: ✅ Полная документация архитектуры проекта (общая + Smart Alarm + CloudKit)
+**Статус**: ✅ Полная документация архитектуры проекта (общая + Smart Alarm + CloudKit + Obsidian интеграция)

@@ -89,8 +89,6 @@ class MeditationFormViewModel: ObservableObject {
             // Save to CloudKit
             try await cloudKitService.insertMeditation(meditation)
             
-            print("✅ Meditation saved to CloudKit:", meditation.asMarkdown)
-            
             return true
         } catch {
             errorMessage = "Ошибка сохранения: \(error.localizedDescription)"

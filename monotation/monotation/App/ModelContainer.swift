@@ -38,21 +38,6 @@ extension ModelContainer {
             // Store shared instance
             sharedContainer = container
             
-            // CloudKit синхронизация включена автоматически через entitlements
-            print("✅ ModelContainer created with CloudKit support")
-            
-            // Check CloudKit configuration
-            for config in container.configurations {
-                print("📦 Configuration: \(config)")
-                let cloudKitDatabase = config.cloudKitDatabase
-                print("📦 CloudKit Database: \(cloudKitDatabase)")
-                if let containerID = config.cloudKitContainerIdentifier {
-                    print("📦 CloudKit Container ID: \(containerID)")
-                } else {
-                    print("⚠️ CloudKit Container ID is not set")
-                }
-            }
-            
             return container
         } catch {
             print("❌ Failed to create ModelContainer: \(error)")

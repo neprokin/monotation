@@ -12,17 +12,24 @@ import SwiftData
 class CloudKitService {
     static let shared = CloudKitService()
     
-    private let modelContext: ModelContext
+    private var modelContext: ModelContext?
     
     private init() {
-        // Create ModelContext from ModelContainer
-        // Note: This uses the same ModelContainer as the app, so CloudKit sync should work
-        let container = ModelContainer.create()
-        self.modelContext = ModelContext(container)
-        
-        // Force CloudKit sync by accessing the persistent store coordinator
-        // This ensures CloudKit knows about the changes
-        print("📦 CloudKitService initialized with ModelContext")
+        // ModelContext will be set from environment
+    }
+    
+    /// Set ModelContext from environment (should be called once at app startup)
+    func setModelContext(_ context: ModelContext) {
+        self.modelContext = context
+    }
+    
+    private func getModelContext() throws -> ModelContext {
+        guard let context = modelContext else {
+            // Fallback: create from shared container (shouldn't happen in normal flow)
+            let container = ModelContainer.create()
+            return ModelContext(container)
+        }
+        return context
     }
     
     // MARK: - Fetch Meditations
@@ -30,13 +37,12 @@ class CloudKitService {
     /// Fetch all meditations (CloudKit automatically filters by iCloud account)
     func fetchMeditations() async throws -> [Meditation] {
         do {
+            let context = try getModelContext()
             let descriptor = FetchDescriptor<MeditationModel>(
                 sortBy: [SortDescriptor(\.startTime, order: .reverse)]
             )
             
-            let models = try modelContext.fetch(descriptor)
-            print("✅ CloudKitService: Fetched \(models.count) meditations")
-            
+            let models = try context.fetch(descriptor)
             return models.map { $0.toMeditation() }
         } catch {
             print("❌ CloudKitService.fetchMeditations error: \(error)")
@@ -48,23 +54,31 @@ class CloudKitService {
     
     func insertMeditation(_ meditation: Meditation) async throws {
         do {
+            let context = try getModelContext()
             let model = MeditationModel(from: meditation)
-            modelContext.insert(model)
+            context.insert(model)
             
             // Save to local store (this should trigger CloudKit sync automatically)
-            try modelContext.save()
-            print("✅ CloudKitService: Meditation saved locally: \(meditation.id)")
+            try context.save()
             
             // Force process pending changes to trigger CloudKit sync
             // SwiftData with CloudKit should sync automatically, but we can help it along
             try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
             
             // Try to save again to ensure changes are persisted
-            try modelContext.save()
-            print("📦 CloudKitService: Changes persisted, CloudKit sync should happen automatically")
+            try context.save()
             
             // Note: CloudKit sync happens in the background and may take 5-15 minutes
             // The data is safe locally and will sync when CloudKit is ready
+            
+            // Sync to Obsidian if enabled
+            Task {
+                do {
+                    try await ObsidianService.shared.addMeditation(meditation)
+                } catch {
+                    // Don't throw - Obsidian sync is optional
+                }
+            }
         } catch {
             print("❌ CloudKitService.insertMeditation error: \(error)")
             throw CloudKitError.insertFailed(error)
@@ -75,11 +89,12 @@ class CloudKitService {
     
     func updateMeditation(_ meditation: Meditation) async throws {
         do {
+            let context = try getModelContext()
             let descriptor = FetchDescriptor<MeditationModel>(
                 predicate: #Predicate { $0.id == meditation.id }
             )
             
-            guard let model = try modelContext.fetch(descriptor).first else {
+            guard let model = try context.fetch(descriptor).first else {
                 throw CloudKitError.notFound
             }
             
@@ -90,7 +105,7 @@ class CloudKitService {
             model.place = meditation.place.storedValue
             model.note = meditation.note
             
-            try modelContext.save()
+            try context.save()
             print("✅ CloudKitService: Meditation updated in CloudKit: \(meditation.id)")
         } catch {
             if case CloudKitError.notFound = error {
@@ -105,17 +120,18 @@ class CloudKitService {
     
     func deleteMeditation(id: UUID) async throws {
         do {
+            let context = try getModelContext()
             let descriptor = FetchDescriptor<MeditationModel>(
                 predicate: #Predicate { $0.id == id }
             )
             
-            guard let model = try modelContext.fetch(descriptor).first else {
+            guard let model = try context.fetch(descriptor).first else {
                 throw CloudKitError.notFound
             }
             
-            modelContext.delete(model)
+            context.delete(model)
             
-            try modelContext.save()
+            try context.save()
             print("✅ CloudKitService: Meditation deleted from CloudKit: \(id)")
         } catch {
             if case CloudKitError.notFound = error {

@@ -22,6 +22,11 @@ struct monotationApp: App {
             TimerView()
                 .tint(.primary) // Monochrome accent color
                 .environmentObject(connectivityManager)
+                .onAppear {
+                    // Set ModelContext for CloudKitService from container
+                    let context = ModelContext(container)
+                    CloudKitService.shared.setModelContext(context)
+                }
         }
         .modelContainer(container)
     }

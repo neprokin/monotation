@@ -92,25 +92,28 @@ extension ConnectivityManager: WCSessionDelegate {
                 return
             }
             
-            print("✅ iOS: WCSession activated")
+            // Only log if Watch app is installed (to reduce noise when not installed)
+            if session.isWatchAppInstalled {
+                print("✅ iOS: WCSession activated")
+            }
             isWatchAppInstalled = session.isWatchAppInstalled
             isWatchReachable = session.isReachable
         }
     }
     
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
-        print("⚠️ iOS: WCSession became inactive")
+        // Don't log - this is normal when Watch app is not installed
     }
     
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
-        print("⚠️ iOS: WCSession deactivated, reactivating...")
+        // Reactivate silently - this is normal when Watch app is not installed
         session.activate()
     }
     
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor in
             isWatchReachable = session.isReachable
-            print("📱 iOS: Watch reachability changed: \(session.isReachable)")
+            // Don't log - this can fire very frequently
         }
     }
     

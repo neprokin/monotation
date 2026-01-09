@@ -54,6 +54,60 @@ struct Meditation: Codable, Identifiable, Equatable {
         
         return markdown
     }
+    
+    /// Key for deduplication in Obsidian (format: "YYYY-MM-DD HH:MM")
+    var obsidianKey: String {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: startTime)
+        
+        guard let year = components.year,
+              let month = components.month,
+              let day = components.day,
+              let hour = components.hour,
+              let minute = components.minute else {
+            return UUID().uuidString // Fallback
+        }
+        
+        return String(format: "%04d-%02d-%02d %02d:%02d", year, month, day, hour, minute)
+    }
+    
+    /// Format for Obsidian sessions.md file
+    /// Format: - **HH:MM** — X минут. Поза, Место. [Заметка если короткая]
+    /// Matches the format in sessions.md file
+    var obsidianFormat: String {
+        let time = formattedStartTime
+        let duration = formattedDuration
+        
+        // Format: "Бирманская поза" (if home) or "Бирманская поза, в офисе" (if work/custom)
+        let poseAndPlace: String
+        if place.displayName == "Дом" {
+            poseAndPlace = "\(pose.rawValue) поза"
+        } else {
+            // Format: "Бирманская поза, в офисе" (with "в" preposition)
+            let placeName = place.displayName.lowercased()
+            poseAndPlace = "\(pose.rawValue) поза, \(placeName)"
+        }
+        
+        // If note is short (less than 150 chars and single line), include in same line
+        if let note = note, !note.isEmpty, note.count < 150, !note.contains("\n") {
+            return "- **\(time)** — \(duration). \(poseAndPlace). \(note)"
+        } else if let note = note, !note.isEmpty {
+            // Long note or multi-line - separate lines (old format)
+            let noteLines = note.components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .map { "  - \($0)" }
+            
+            var result = "- **\(time)** — \(duration)\n"
+            result += "- **Поза**: \(poseAndPlace)\n"
+            result += "- **Заметки**:\n"
+            result += noteLines.joined(separator: "\n")
+            return result
+        } else {
+            // No note - single line format
+            return "- **\(time)** — \(duration). \(poseAndPlace)."
+        }
+    }
 }
 
 // MARK: - Sample Data for Previews
