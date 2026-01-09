@@ -28,8 +28,8 @@ struct MeditationFormView: View {
                 // Pose picker
                 poseSection
                 
-                // Place picker
-                placeSection
+                // Location section
+                locationSection
                 
                 // Note field
                 noteSection
@@ -95,50 +95,46 @@ struct MeditationFormView: View {
         }
     }
     
-    // MARK: - Place Section
+    // MARK: - Location Section
     
-    private var placeSection: some View {
+    private var locationSection: some View {
         Section("Место") {
-            // Predefined places
-            ForEach(MeditationPlace.predefined, id: \.self) { place in
-                Button {
-                    viewModel.selectedPlace = place
-                } label: {
-                    HStack {
-                        Label(place.displayName, systemImage: place.iconName)
-                            .foregroundStyle(.primary)
-                        
-                        Spacer()
-                        
-                        if viewModel.selectedPlace == place {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.primary)
-                        }
-                    }
-                }
-            }
-            
-            // Custom place option
-            Button {
-                viewModel.selectedPlace = .custom("")
-            } label: {
+            if viewModel.isLocationLoading {
                 HStack {
-                    Label("Другое место", systemImage: "location.fill")
-                        .foregroundStyle(.primary)
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Определение местоположения...")
+                        .foregroundStyle(.secondary)
+                }
+            } else if viewModel.latitude != nil && viewModel.longitude != nil {
+                // Показываем адрес и позволяем редактировать
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Адрес")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     
-                    Spacer()
-                    
-                    if case .custom = viewModel.selectedPlace {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(.primary)
-                    }
+                    TextField("Укажите адрес (например, ул. Тверская, 1)", text: $viewModel.editableLocationName, axis: .vertical)
+                        .textInputAutocapitalization(.words)
+                        .lineLimit(2...4)
+                }
+            } else {
+                HStack {
+                    Image(systemName: "location.slash")
+                        .foregroundStyle(.secondary)
+                    Text("Местоположение недоступно")
+                        .foregroundStyle(.secondary)
                 }
             }
             
-            // Custom place text field (shown when custom is selected)
-            if case .custom = viewModel.selectedPlace {
-                TextField("Укажите место", text: $viewModel.customPlace)
-                    .textInputAutocapitalization(.sentences)
+            // Button to retry location
+            if !viewModel.isLocationLoading {
+                Button {
+                    Task {
+                        await viewModel.requestLocation()
+                    }
+                } label: {
+                    Label("Обновить местоположение", systemImage: "arrow.clockwise")
+                }
             }
         }
     }

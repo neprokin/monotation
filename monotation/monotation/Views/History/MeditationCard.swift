@@ -36,15 +36,26 @@ struct MeditationCard: View {
                         .foregroundStyle(.secondary)
                 }
                 
-                // Place
-                HStack(spacing: 4) {
-                    Image(systemName: meditation.place.iconName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    
-                    Text(meditation.place.displayName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // Location - показываем всегда, если есть координаты или адрес
+                if (meditation.latitude != nil && meditation.longitude != nil) || 
+                   (meditation.locationName != nil && !meditation.locationName!.isEmpty) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        if let locationName = meditation.locationName, !locationName.isEmpty {
+                            Text(locationName)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        } else if meditation.latitude != nil && meditation.longitude != nil {
+                            Text("Координаты: \(String(format: "%.4f", meditation.latitude!)), \(String(format: "%.4f", meditation.longitude!))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
                 }
             }
             

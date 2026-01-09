@@ -8,6 +8,7 @@
 import Foundation
 import WatchConnectivity
 import Combine
+import CoreLocation
 
 @MainActor
 class ConnectivityManager: NSObject, ObservableObject {
@@ -66,13 +67,40 @@ class ConnectivityManager: NSObject, ObservableObject {
             throw ConnectivityError.phoneNotReachable
         }
         
-        let message: [String: Any] = [
+        // Get location if available
+        var latitude: Double? = nil
+        var longitude: Double? = nil
+        var locationName: String? = nil
+        
+        let locationService = LocationService.shared
+        if locationService.authorizationStatus == .authorizedWhenInUse || 
+           locationService.authorizationStatus == .authorizedAlways {
+            do {
+                let locationResult = try await locationService.getCurrentLocation()
+                latitude = locationResult.latitude
+                longitude = locationResult.longitude
+                locationName = locationResult.address
+            } catch {
+                print("⚠️ Watch: Failed to get location: \(error.localizedDescription)")
+            }
+        }
+        
+        var message: [String: Any] = [
             "type": "saveMeditation",
             "duration": duration,
             "averageHeartRate": averageHeartRate,
             "startTime": startTime.timeIntervalSince1970,
             "pose": pose.rawValue
         ]
+        
+        // Add location data if available
+        if let lat = latitude, let lon = longitude {
+            message["latitude"] = lat
+            message["longitude"] = lon
+            if let name = locationName {
+                message["locationName"] = name
+            }
+        }
         
         print("⌚️ Watch: Sending meditation to iPhone...")
         print("   Duration: \(Int(duration))s, HR: \(Int(averageHeartRate)) bpm")

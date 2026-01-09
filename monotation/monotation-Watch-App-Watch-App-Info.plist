@@ -8,5 +8,7 @@
 	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Медитация</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Приложение использует геолокацию для сохранения места медитации</string>
 </dict>
 </plist>

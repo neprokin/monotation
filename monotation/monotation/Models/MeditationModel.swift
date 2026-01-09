@@ -16,8 +16,11 @@ final class MeditationModel {
     var startTime: Date = Date()
     var endTime: Date = Date()
     var pose: String = MeditationPose.burmese.rawValue  // MeditationPose.rawValue
-    var place: String = MeditationPlace.home.storedValue  // MeditationPlace.storedValue
+    var latitude: Double? = nil  // Широта
+    var longitude: Double? = nil  // Долгота
+    var locationName: String? = nil  // Название места (адрес)
     var note: String? = nil
+    var averageHeartRate: Double? = nil  // Средний пульс (только для Watch медитаций)
     var createdAt: Date = Date()
     
     // Computed properties (не сохраняются в CloudKit)
@@ -30,16 +33,22 @@ final class MeditationModel {
         startTime: Date,
         endTime: Date,
         pose: String,
-        place: String,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        locationName: String? = nil,
         note: String? = nil,
+        averageHeartRate: Double? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
         self.startTime = startTime
         self.endTime = endTime
         self.pose = pose
-        self.place = place
+        self.latitude = latitude
+        self.longitude = longitude
+        self.locationName = locationName
         self.note = note
+        self.averageHeartRate = averageHeartRate
         self.createdAt = createdAt
     }
     
@@ -51,8 +60,11 @@ final class MeditationModel {
             startTime: meditation.startTime,
             endTime: meditation.endTime,
             pose: meditation.pose.rawValue,
-            place: meditation.place.storedValue,
+            latitude: meditation.latitude,
+            longitude: meditation.longitude,
+            locationName: meditation.locationName,
             note: meditation.note,
+            averageHeartRate: meditation.averageHeartRate,
             createdAt: meditation.createdAt
         )
     }
@@ -66,8 +78,11 @@ final class MeditationModel {
             startTime: startTime,
             endTime: endTime,
             pose: MeditationPose(rawValue: pose) ?? .burmese,
-            place: MeditationPlace.from(place),
+            latitude: latitude,
+            longitude: longitude,
+            locationName: locationName,
             note: note,
+            averageHeartRate: averageHeartRate,
             createdAt: createdAt
         )
     }

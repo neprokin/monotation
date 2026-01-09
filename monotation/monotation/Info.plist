@@ -11,5 +11,7 @@
 	<string>Приложение использует данные о пульсе для анализа медитации</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Приложение сохраняет данные о медитациях в HealthKit</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Приложение использует геолокацию для сохранения места медитации</string>
 </dict>
 </plist>

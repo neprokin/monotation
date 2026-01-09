@@ -102,8 +102,11 @@ class CloudKitService {
             model.startTime = meditation.startTime
             model.endTime = meditation.endTime
             model.pose = meditation.pose.rawValue
-            model.place = meditation.place.storedValue
+            model.latitude = meditation.latitude
+            model.longitude = meditation.longitude
+            model.locationName = meditation.locationName
             model.note = meditation.note
+            model.averageHeartRate = meditation.averageHeartRate
             
             try context.save()
             print("✅ CloudKitService: Meditation updated in CloudKit: \(meditation.id)")

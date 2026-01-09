@@ -8,6 +8,7 @@
 import Foundation
 import WatchConnectivity
 import Combine
+import CoreLocation
 
 @MainActor
 class ConnectivityManager: NSObject, ObservableObject {
@@ -45,6 +46,33 @@ class ConnectivityManager: NSObject, ObservableObject {
         let poseString = data["pose"] as? String ?? "Лотос"
         let pose = MeditationPose(rawValue: poseString) ?? .lotus
         
+        // Get location from Watch if available, otherwise get current location on iPhone
+        var latitude: Double? = nil
+        var longitude: Double? = nil
+        var locationName: String? = nil
+        
+        // Try to get location from Watch data first
+        if let watchLat = data["latitude"] as? Double,
+           let watchLon = data["longitude"] as? Double {
+            latitude = watchLat
+            longitude = watchLon
+            locationName = data["locationName"] as? String
+        } else {
+            // Get current location on iPhone
+            let locationService = LocationService.shared
+            if locationService.authorizationStatus == .authorizedWhenInUse || 
+               locationService.authorizationStatus == .authorizedAlways {
+                do {
+                    let locationResult = try await locationService.getCurrentLocation()
+                    latitude = locationResult.latitude
+                    longitude = locationResult.longitude
+                    locationName = locationResult.address
+                } catch {
+                    print("⚠️ iOS: Failed to get location for Watch meditation: \(error.localizedDescription)")
+                }
+            }
+        }
+        
         // Create meditation object
         // CloudKit automatically uses iCloud account (no userId needed)
         let meditation = Meditation(
@@ -53,8 +81,11 @@ class ConnectivityManager: NSObject, ObservableObject {
             startTime: startTime,
             endTime: endTime,
             pose: pose,
-            place: .home,   // Default for Watch meditations
-            note: "От Apple Watch ⌚️\nСредний пульс: \(Int(averageHeartRate)) уд/мин",
+            latitude: latitude,
+            longitude: longitude,
+            locationName: locationName,
+            note: averageHeartRate > 0 ? "От Apple Watch ⌚️ Средний пульс: \(Int(averageHeartRate)) уд/мин" : nil,
+            averageHeartRate: averageHeartRate > 0 ? averageHeartRate : nil,
             createdAt: Date()
         )
         

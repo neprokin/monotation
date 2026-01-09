@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import MapKit
 
 struct MeditationDetailView: View {
     let meditation: Meditation
@@ -29,13 +30,16 @@ struct MeditationDetailView: View {
                                 .font(.title2)
                                 .fontWeight(.semibold)
                             
-                            HStack(spacing: 4) {
-                                Image(systemName: meditation.place.iconName)
-                                    .font(.caption)
-                                Text(meditation.place.displayName)
-                                    .font(.subheadline)
+                            if let locationName = meditation.locationName, !locationName.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "location.fill")
+                                        .font(.caption)
+                                    Text(locationName)
+                                        .font(.subheadline)
+                                        .lineLimit(2)
+                                }
+                                .foregroundStyle(.secondary)
                             }
-                            .foregroundStyle(.secondary)
                         }
                         
                         Spacer()
@@ -60,8 +64,34 @@ struct MeditationDetailView: View {
                             Text(meditation.formattedDuration)
                                 .foregroundStyle(.secondary)
                         }
+                        
+                        // Heart rate (if available)
+                        if let heartRate = meditation.averageHeartRate, heartRate > 0 {
+                            LabeledContent("Пульс") {
+                                Text("\(Int(heartRate)) уд/мин")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                     .font(.body)
+                    
+                    // Location map (if coordinates available)
+                    if let latitude = meditation.latitude,
+                       let longitude = meditation.longitude {
+                        Divider()
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Место")
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            
+                            LocationMapView(
+                                latitude: latitude,
+                                longitude: longitude,
+                                locationName: meditation.locationName
+                            )
+                        }
+                    }
                     
                     // Note (if exists)
                     if let note = meditation.note, !note.isEmpty {

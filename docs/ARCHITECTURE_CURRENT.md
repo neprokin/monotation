@@ -43,10 +43,10 @@ monotation/
 │   ├── Models/                    # Data models
 │   │   ├── MeditationModel.swift  # SwiftData @Model для CloudKit
 │   │   ├── Meditation.swift       # Struct (для обратной совместимости)
-│   │   ├── MeditationPose.swift
-│   │   └── MeditationPlace.swift
+│   │   └── MeditationPose.swift
 │   ├── Services/                  # Backend & System
 │   │   ├── CloudKitService.swift  # CRUD с CloudKit (SwiftData)
+│   │   ├── LocationService.swift # Геолокация и обратное геокодирование
 │   │   ├── AuthService.swift      # Упрощённый (CloudKit использует iCloud автоматически)
 │   │   ├── ObsidianService.swift  # Интеграция с Obsidian (Markdown файлы)
 │   │   ├── NotificationService.swift  # Time-sensitive уведомления
@@ -94,6 +94,7 @@ User Action → View → Service (AlarmController/WorkoutManager) → HealthKit/
   - `HistoryViewModel` - загрузка истории из CloudKit
 - **Services**: Actor/Class для backend и system интеграции
   - `CloudKitService` - CRUD операции с CloudKit через SwiftData
+  - `LocationService` - Геолокация и обратное геокодирование (CoreLocation)
   - `AuthService` - Упрощённый (CloudKit использует iCloud автоматически)
   - `ObsidianService` - Интеграция с Obsidian (автоматическое добавление медитаций в Markdown файл)
   - `NotificationService` - Time-sensitive уведомления (fallback)
@@ -101,7 +102,7 @@ User Action → View → Service (AlarmController/WorkoutManager) → HealthKit/
 - **Models**: SwiftData @Model для CloudKit + Swift structs для обратной совместимости
   - `MeditationModel` - SwiftData @Model для CloudKit синхронизации
   - `Meditation` - Swift struct (для обратной совместимости)
-  - `MeditationPose`, `MeditationPlace` - enums
+  - `MeditationPose` - enum для поз медитации
 
 **Watch App**:
 - **Views**: SwiftUI декларативный UI
@@ -112,6 +113,7 @@ User Action → View → Service (AlarmController/WorkoutManager) → HealthKit/
 - **Services**: 
   - `MeditationAlarmController` - Smart Alarm управление (WKExtendedRuntimeSession)
   - `WorkoutManager` - HKWorkoutSession для HR tracking и Extended Runtime
+  - `LocationService` - Геолокация (получение координат, геокодирование на iPhone)
   - `ConnectivityManager` - синхронизация с iPhone App
 
 ### Синхронизация Watch ↔ iPhone
@@ -162,6 +164,28 @@ HealthKit сохранение
 4. Выбрать: **Private Database** + **`com.apple.coredata.cloudkit.zone`**
 5. Использовать: **"Fetch Changes"** (не "Query Records")
 
+### Геолокация
+
+**Назначение**: Автоматическое определение места медитации с возможностью редактирования адреса.
+
+**Реализация**:
+- `LocationService` (iOS и Watch) - сервис для получения геолокации
+- Автоматическое определение координат при сохранении медитации
+- Обратное геокодирование для получения адреса из координат
+- Возможность редактирования адреса пользователем (например, добавление номера дома)
+- Отображение места медитации на интерактивной карте в детальном виде
+
+**Особенности**:
+- **iOS**: Полное геокодирование (координаты + адрес)
+- **Watch**: Получение координат, геокодирование выполняется на iPhone при синхронизации
+- **Карта**: Используется MapKit для отображения места медитации
+- **Разрешения**: `NSLocationWhenInUseUsageDescription` в Info.plist
+
+**Модель данных**:
+- `Meditation.latitude: Double?` - широта
+- `Meditation.longitude: Double?` - долгота
+- `Meditation.locationName: String?` - адрес (может быть отредактирован пользователем)
+
 ### Интеграция с Obsidian
 
 **Назначение**: Автоматическое добавление медитаций в Markdown файл для анализа в Obsidian.
@@ -182,7 +206,8 @@ HealthKit сохранение
 ### DD Month
 - **HH:MM** — X минут
 - **Поза**: [Поза]
-- **Место**: [Место]
+- **Место**: [Адрес или координаты]
+- **Пульс**: X уд/мин (если доступен)
 - **Заметки**:
   - [Заметка 1]
   - [Заметка 2]

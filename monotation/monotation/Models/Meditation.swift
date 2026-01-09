@@ -13,8 +13,11 @@ struct Meditation: Codable, Identifiable, Equatable {
     let startTime: Date
     let endTime: Date
     let pose: MeditationPose
-    let place: MeditationPlace
+    let latitude: Double? // Широта
+    let longitude: Double? // Долгота
+    let locationName: String? // Название места (адрес)
     let note: String?
+    let averageHeartRate: Double? // Средний пульс (только для Watch медитаций)
     let createdAt: Date
     
     /// Computed duration in seconds
@@ -38,13 +41,22 @@ struct Meditation: Codable, Identifiable, Equatable {
     }
     
     /// Markdown representation for future AI analysis
+    /// Format matches the app's MeditationDetailView format
     var asMarkdown: String {
         var markdown = "# Медитация \(startTime.formatted())\n\n"
-        markdown += "- **Дата**: \(startTime.formatted(date: .long, time: .omitted))\n"
-        markdown += "- **Время начала**: \(formattedStartTime)\n"
+        markdown += "- **Начало**: \(startTime.formatted(date: .abbreviated, time: .shortened))\n"
+        markdown += "- **Окончание**: \(endTime.formatted(date: .abbreviated, time: .shortened))\n"
         markdown += "- **Длительность**: \(formattedDuration)\n"
-        markdown += "- **Поза**: \(pose.rawValue)\n"
-        markdown += "- **Место**: \(place.displayName)\n\n"
+        markdown += "- **Поза**: \(pose.displayName)\n"
+        if let locationName = locationName, !locationName.isEmpty {
+            markdown += "- **Место**: \(locationName)\n"
+        }
+        
+        if let heartRate = averageHeartRate, heartRate > 0 {
+            markdown += "- **Пульс**: \(Int(heartRate)) уд/мин\n"
+        }
+        
+        markdown += "\n"
         
         if let note = note, !note.isEmpty {
             markdown += "## Заметка\n\n"
@@ -72,41 +84,37 @@ struct Meditation: Codable, Identifiable, Equatable {
     }
     
     /// Format for Obsidian sessions.md file
-    /// Format: - **HH:MM** — X минут. Поза, Место. [Заметка если короткая]
-    /// Matches the format in sessions.md file
+    /// Format matches the app's MeditationDetailView format
     var obsidianFormat: String {
         let time = formattedStartTime
         let duration = formattedDuration
+        let poseName = pose.displayName
         
-        // Format: "Бирманская поза" (if home) or "Бирманская поза, в офисе" (if work/custom)
-        let poseAndPlace: String
-        if place.displayName == "Дом" {
-            poseAndPlace = "\(pose.rawValue) поза"
-        } else {
-            // Format: "Бирманская поза, в офисе" (with "в" preposition)
-            let placeName = place.displayName.lowercased()
-            poseAndPlace = "\(pose.rawValue) поза, \(placeName)"
+        var result = "- **\(time)** — \(duration)\n"
+        result += "- **Поза**: \(poseName)\n"
+        
+        if let locationName = locationName, !locationName.isEmpty {
+            result += "- **Место**: \(locationName)\n"
         }
         
-        // If note is short (less than 150 chars and single line), include in same line
-        if let note = note, !note.isEmpty, note.count < 150, !note.contains("\n") {
-            return "- **\(time)** — \(duration). \(poseAndPlace). \(note)"
-        } else if let note = note, !note.isEmpty {
-            // Long note or multi-line - separate lines (old format)
+        // Add heart rate if available
+        if let heartRate = averageHeartRate, heartRate > 0 {
+            result += "- **Пульс**: \(Int(heartRate)) уд/мин\n"
+        }
+        
+        // Add note if exists
+        if let note = note, !note.isEmpty {
             let noteLines = note.components(separatedBy: .newlines)
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
-                .map { "  - \($0)" }
             
-            var result = "- **\(time)** — \(duration)\n"
-            result += "- **Поза**: \(poseAndPlace)\n"
-            result += "- **Заметки**:\n"
-            result += noteLines.joined(separator: "\n")
-            return result
-        } else {
-            // No note - single line format
-            return "- **\(time)** — \(duration). \(poseAndPlace)."
+            if !noteLines.isEmpty {
+                result += "- **Заметки**:\n"
+                result += noteLines.map { "  - \($0)" }.joined(separator: "\n")
+            }
         }
+        
+        return result
     }
 }
 
@@ -119,8 +127,11 @@ extension Meditation {
         startTime: Date().addingTimeInterval(-1200), // 20 min ago
         endTime: Date(),
         pose: .burmese,
-        place: .home,
+        latitude: 55.7558,
+        longitude: 37.6173,
+        locationName: "Москва, Россия",
         note: "Хорошая концентрация на дыхании",
+        averageHeartRate: nil,
         createdAt: Date()
     )
     
@@ -132,8 +143,11 @@ extension Meditation {
             startTime: Date().addingTimeInterval(-3600), // 1 hour ago
             endTime: Date().addingTimeInterval(-3000),
             pose: .burmese,
-            place: .home,
+            latitude: 55.7558,
+            longitude: 37.6173,
+            locationName: "Москва, ул. Тверская, 1",
             note: "Утренняя медитация",
+            averageHeartRate: nil,
             createdAt: Date()
         ),
         Meditation(
@@ -142,8 +156,11 @@ extension Meditation {
             startTime: Date().addingTimeInterval(-90000), // yesterday
             endTime: Date().addingTimeInterval(-89100),
             pose: .walking,
-            place: .custom("Парк"),
+            latitude: 55.7520,
+            longitude: 37.6156,
+            locationName: "Парк Горького, Москва",
             note: nil,
+            averageHeartRate: 65.0,
             createdAt: Date().addingTimeInterval(-90000)
         ),
         Meditation(
@@ -152,8 +169,11 @@ extension Meditation {
             startTime: Date().addingTimeInterval(-180000), // 2 days ago
             endTime: Date().addingTimeInterval(-178200),
             pose: .burmese,
-            place: .work,
+            latitude: 55.7512,
+            longitude: 37.6184,
+            locationName: "Офис, Москва",
             note: "Медитация во время обеда",
+            averageHeartRate: nil,
             createdAt: Date().addingTimeInterval(-180000)
         )
     ]
